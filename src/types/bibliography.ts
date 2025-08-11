@@ -42,10 +42,14 @@ export interface BibliographySearchResult {
 
 export interface BibliographyFilters {
   year?: string;
+  publication?: string;
+  publisher?: string;
   language_published?: string;
   language_researched?: string;
   country_of_research?: string;
   keywords?: string;
+  biblio_name?: string;
+  date_of_entry?: string;
   source?: string;
   language_family?: string;
 }
