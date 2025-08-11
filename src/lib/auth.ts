@@ -17,33 +17,38 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        const client = await clientPromise;
-        const db = client.db("test");
-        const usersCollection = db.collection("users");
+        try {
+          const client = await clientPromise;
+          const db = client.db("test");
+          const usersCollection = db.collection("users");
 
-        const user = await usersCollection.findOne({
-          email: credentials.email.toLowerCase(),
-        });
+          const user = await usersCollection.findOne({
+            email: credentials.email.toLowerCase(),
+          });
 
-        if (!user) {
+          if (!user) {
+            return null;
+          }
+
+          const isPasswordValid = await compare(
+            credentials.password,
+            user.password
+          );
+
+          if (!isPasswordValid) {
+            return null;
+          }
+
+          return {
+            id: user._id.toString(),
+            email: user.email,
+            name: user.name,
+            role: user.role,
+          };
+        } catch (error) {
+          console.error("Auth error:", error);
           return null;
         }
-
-        const isPasswordValid = await compare(
-          credentials.password,
-          user.password
-        );
-
-        if (!isPasswordValid) {
-          return null;
-        }
-
-        return {
-          id: user._id.toString(),
-          email: user.email,
-          name: user.name,
-          role: user.role,
-        };
       },
     }),
   ],
