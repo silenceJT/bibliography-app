@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { BookOpen, Calendar, User, ExternalLink, Plus, Clock, FileText } from "lucide-react";
 import { Bibliography } from "@/types/bibliography";
 import Link from "next/link";
+import { getRelativeTimeFromObjectId } from "@/utils/objectid";
 
 type RecentBibliographiesProps = Record<string, never>;
 
@@ -18,8 +19,9 @@ export function RecentBibliographies({}: RecentBibliographiesProps) {
 
   const fetchRecentBibliographies = async () => {
     try {
+      // Sort by ObjectId (which contains timestamp) in descending order to get most recent first
       const response = await fetch(
-        "/api/bibliography?page=1&limit=10&sortBy=created_at&sortOrder=desc"
+        "/api/bibliography?page=1&limit=10&sortBy=_id&sortOrder=desc"
       );
       if (response.ok) {
         const data = await response.json();
@@ -36,18 +38,12 @@ export function RecentBibliographies({}: RecentBibliographiesProps) {
     return showAll ? recentItems : recentItems.slice(0, 5);
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffTime = Math.abs(now.getTime() - date.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays === 1) return 'Yesterday';
-    if (diffDays < 7) return `${diffDays} days ago`;
-    if (diffDays < 30) return `${Math.ceil(diffDays / 7)} weeks ago`;
-    if (diffDays < 365) return `${Math.ceil(diffDays / 30)} months ago`;
-    return `${Math.ceil(diffDays / 365)} years ago`;
+  const getDisplayDate = (item: Bibliography) => {
+    // Always use ObjectId extraction - it's more reliable and consistent
+    return item._id ? getRelativeTimeFromObjectId(item._id) : 'Unknown date';
   };
+
+
 
   const getPublicationType = (publication?: string) => {
     if (!publication) return 'Unknown';
@@ -152,10 +148,10 @@ export function RecentBibliographies({}: RecentBibliographiesProps) {
                             <span className="font-medium">{item.year}</span>
                           </div>
                         )}
-                                                 <div className="flex items-center gap-1">
-                           <Clock className="h-4 w-4" />
-                           <span>{formatDate(item.created_at?.toISOString() || new Date().toISOString())}</span>
-                         </div>
+                        <div className="flex items-center gap-1">
+                          <Clock className="h-4 w-4" />
+                          <span>{getDisplayDate(item)}</span>
+                        </div>
                       </div>
                       
                       {item.publication && (

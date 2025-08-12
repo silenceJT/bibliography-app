@@ -1,19 +1,28 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { TrendingUp, BookOpen, Globe, Calendar, Award, Target, Lightbulb, BarChart3 } from "lucide-react";
+import {
+  TrendingUp,
+  BookOpen,
+  Globe,
+  Calendar,
+  Award,
+  Target,
+  Lightbulb,
+  BarChart3,
+} from "lucide-react";
 
 type ResearchInsightsProps = Record<string, never>;
 
 interface ResearchInsight {
-  type: 'publication' | 'language' | 'country' | 'trend';
+  type: "publication" | "language" | "country" | "trend";
   title: string;
   value: string;
   description: string;
   icon: React.ComponentType<{ className?: string }>;
   color: string;
   trend?: {
-    direction: 'up' | 'down' | 'stable';
+    direction: "up" | "down" | "stable";
     value: string;
   };
 }
@@ -30,17 +39,28 @@ export function ResearchInsights({}: ResearchInsightsProps) {
     try {
       setIsLoading(true);
       // Fetch multiple data points in parallel for better performance
-      const [trendsResponse, languagesResponse, countriesResponse] = await Promise.all([
-        fetch("/api/dashboard/trends?range=5y"),
-        fetch("/api/dashboard/languages"),
-        fetch("/api/dashboard/stats")
-      ]);
+      const [trendsResponse, languagesResponse, countriesResponse] =
+        await Promise.all([
+          fetch("/api/dashboard/trends?range=5y"),
+          fetch("/api/dashboard/languages"),
+          fetch("/api/dashboard/stats"),
+        ]);
 
-      const trendsData = trendsResponse.ok ? await trendsResponse.json() : { trends: [] };
-      const languagesData = languagesResponse.ok ? await languagesResponse.json() : { languages: [] };
-      const statsData = countriesResponse.ok ? await countriesResponse.json() : {};
+      const trendsData = trendsResponse.ok
+        ? await trendsResponse.json()
+        : { trends: [] };
+      const languagesData = languagesResponse.ok
+        ? await languagesResponse.json()
+        : { languages: [] };
+      const statsData = countriesResponse.ok
+        ? await countriesResponse.json()
+        : {};
 
-      const processedInsights = processInsights(trendsData, languagesData, statsData);
+      const processedInsights = processInsights(
+        trendsData,
+        languagesData,
+        statsData
+      );
       setInsights(processedInsights);
     } catch (error) {
       console.error("Error fetching research insights:", error);
@@ -49,7 +69,16 @@ export function ResearchInsights({}: ResearchInsightsProps) {
     }
   };
 
-  const processInsights = (trends: { trends?: Array<{ year: string; count: number }> }, languages: { languages?: Array<{ language: string; count: number }> }, stats: { totalRecords?: number; languages?: number; countries?: number; thisYear?: number }): ResearchInsight[] => {
+  const processInsights = (
+    trends: { trends?: Array<{ year: string; count: number }> },
+    languages: { languages?: Array<{ language: string; count: number }> },
+    stats: {
+      totalRecords?: number;
+      languages?: number;
+      countries?: number;
+      thisYear?: number;
+    }
+  ): ResearchInsight[] => {
     const insights: ResearchInsight[] = [];
 
     // Most active research year
@@ -57,16 +86,16 @@ export function ResearchInsights({}: ResearchInsightsProps) {
       const sortedTrends = trends.trends.sort((a, b) => b.count - a.count);
       const mostActiveYear = sortedTrends[0];
       insights.push({
-        type: 'trend',
-        title: 'Most Active Year',
+        type: "trend",
+        title: "Most Active Year",
         value: mostActiveYear.year,
         description: `${mostActiveYear.count} publications`,
         icon: Calendar,
-        color: 'bg-blue-500',
+        color: "bg-blue-500",
         trend: {
-          direction: 'up',
-          value: `${mostActiveYear.count} publications`
-        }
+          direction: "up",
+          value: `${mostActiveYear.count} publications`,
+        },
       });
     }
 
@@ -74,74 +103,76 @@ export function ResearchInsights({}: ResearchInsightsProps) {
     if (languages.languages && languages.languages.length > 0) {
       const topLanguage = languages.languages[0];
       insights.push({
-        type: 'language',
-        title: 'Primary Language',
+        type: "language",
+        title: "Primary Language",
         value: topLanguage.language,
         description: `${topLanguage.count} publications`,
         icon: Globe,
-        color: 'bg-green-500',
+        color: "bg-green-500",
         trend: {
-          direction: 'stable',
-          value: `${Math.round((topLanguage.count / (stats.totalRecords || 1)) * 100)}% of total`
-        }
+          direction: "stable",
+          value: `${Math.round((topLanguage.count / (stats.totalRecords || 1)) * 100)}% of total`,
+        },
       });
     }
 
     // Research diversity
     if (stats.languages && stats.countries) {
       insights.push({
-        type: 'trend',
-        title: 'Research Diversity',
+        type: "trend",
+        title: "Research Diversity",
         value: `${stats.languages} languages`,
         description: `${stats.countries} countries`,
         icon: Target,
-        color: 'bg-purple-500',
+        color: "bg-purple-500",
         trend: {
-          direction: 'up',
-          value: 'High diversity'
-        }
+          direction: "up",
+          value: "High diversity",
+        },
       });
     }
 
-    // Recent activity
+    // Recent activity - using ObjectId timestamp approach
     if (stats.thisYear && stats.totalRecords) {
-      const thisYearPercentage = Math.round((stats.thisYear / stats.totalRecords) * 100);
+      const thisYearPercentage = Math.round(
+        (stats.thisYear / stats.totalRecords) * 100
+      );
       insights.push({
-        type: 'trend',
-        title: 'This Year\'s Activity',
+        type: "trend",
+        title: "This Year's Activity",
         value: `${stats.thisYear} entries`,
         description: `${thisYearPercentage}% of total database`,
         icon: TrendingUp,
-        color: 'bg-orange-500',
+        color: "bg-orange-500",
         trend: {
-          direction: thisYearPercentage > 10 ? 'up' : 'stable',
-          value: `${thisYearPercentage}% of total`
-        }
+          direction: thisYearPercentage > 10 ? "up" : "stable",
+          value: `${thisYearPercentage}% of total`,
+        },
       });
     }
 
     return insights;
   };
 
-  const getTrendIcon = (direction: 'up' | 'down' | 'stable') => {
+  const getTrendIcon = (direction: "up" | "down" | "stable") => {
     switch (direction) {
-      case 'up':
+      case "up":
         return <TrendingUp className="h-4 w-4 text-green-600" />;
-      case 'down':
+      case "down":
         return <TrendingUp className="h-4 w-4 text-red-600 rotate-180" />;
-      case 'stable':
+      case "stable":
         return <BarChart3 className="h-4 w-4 text-gray-600" />;
     }
   };
 
-  const getTrendColor = (direction: 'up' | 'down' | 'stable') => {
+  const getTrendColor = (direction: "up" | "down" | "stable") => {
     switch (direction) {
-      case 'up':
-        return 'text-green-600 bg-green-50';
-      case 'down':
-        return 'text-red-600 bg-red-50';
-      case 'stable':
-        return 'text-gray-600 bg-gray-50';
+      case "up":
+        return "text-green-600 bg-green-50";
+      case "down":
+        return "text-red-600 bg-red-50";
+      case "stable":
+        return "text-gray-600 bg-gray-50";
     }
   };
 
@@ -192,13 +223,15 @@ export function ResearchInsights({}: ResearchInsightsProps) {
                   <Icon className="h-4 w-4 text-white" />
                 </div>
                 {insight.trend && (
-                  <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getTrendColor(insight.trend.direction)}`}>
+                  <div
+                    className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getTrendColor(insight.trend.direction)}`}
+                  >
                     {getTrendIcon(insight.trend.direction)}
                     <span className="text-xs">{insight.trend.value}</span>
                   </div>
                 )}
               </div>
-              
+
               <div className="space-y-1">
                 <h4 className="text-sm font-medium text-gray-900">
                   {insight.title}
@@ -206,9 +239,7 @@ export function ResearchInsights({}: ResearchInsightsProps) {
                 <p className="text-lg font-bold text-gray-900">
                   {insight.value}
                 </p>
-                <p className="text-xs text-gray-600">
-                  {insight.description}
-                </p>
+                <p className="text-xs text-gray-600">{insight.description}</p>
               </div>
             </div>
           );
@@ -226,7 +257,8 @@ export function ResearchInsights({}: ResearchInsightsProps) {
               Database Health
             </h4>
             <p className="text-xs text-gray-600">
-              Your bibliography database shows strong research coverage across multiple languages and countries
+              Your bibliography database shows strong research coverage across
+              multiple languages and countries
             </p>
           </div>
         </div>
@@ -236,8 +268,12 @@ export function ResearchInsights({}: ResearchInsightsProps) {
       {insights.length === 0 && !isLoading && (
         <div className="text-center py-8">
           <Lightbulb className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-          <h3 className="text-sm font-medium text-gray-900 mb-1">No insights available</h3>
-          <p className="text-sm text-gray-500">Add more bibliography entries to generate research insights.</p>
+          <h3 className="text-sm font-medium text-gray-900 mb-1">
+            No insights available
+          </h3>
+          <p className="text-sm text-gray-500">
+            Add more bibliography entries to generate research insights.
+          </p>
         </div>
       )}
     </div>

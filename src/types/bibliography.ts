@@ -16,8 +16,8 @@ export interface Bibliography {
   date_of_entry: string;
   source: string;
   language_family: string;
-  created_at?: Date;
-  updated_at?: Date;
+  created_at?: Date; // Optional during transition period
+  updated_at?: Date | null; // Optional during transition period
 }
 
 export interface BibliographyCreate

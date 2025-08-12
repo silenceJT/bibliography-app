@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "20");
-    const sortBy = searchParams.get("sortBy") || "created_at";
+    const sortBy = searchParams.get("sortBy") || "_id";
     const sortOrder = (searchParams.get("sortOrder") || "desc") as
       | "asc"
       | "desc";
