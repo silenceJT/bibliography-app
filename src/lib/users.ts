@@ -1,5 +1,5 @@
 import clientPromise from "./mongodb";
-import { hash, compare } from "bcryptjs";
+import { hash } from "bcryptjs";
 import { User, UserCreate, UserUpdate } from "@/types/user";
 import { ObjectId } from "mongodb";
 

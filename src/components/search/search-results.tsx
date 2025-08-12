@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Search, Filter, BookOpen, Calendar, Globe, Tag } from "lucide-react";
+import { Search, BookOpen, Calendar, Globe, Tag } from "lucide-react";
 import { Bibliography } from "@/types/bibliography";
 
 interface SearchResultsProps {
@@ -108,9 +108,9 @@ export function SearchResults({
             : "space-y-4"
         }
       >
-        {results.map((item) => (
+        {results.map((item, index) => (
           <div
-            key={item._id}
+            key={`${item._id}-${index}`}
             onClick={() => onResultClick(item)}
             className={`bg-white rounded-lg shadow-sm border border-gray-200 p-6 cursor-pointer transition-all duration-200 hover:shadow-md hover:border-indigo-300 ${
               viewMode === "list" ? "flex items-start space-x-4" : ""

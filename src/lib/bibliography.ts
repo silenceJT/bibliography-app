@@ -11,8 +11,8 @@ import {
 export class BibliographyService {
   private static async getCollection() {
     const client = await clientPromise;
-    const db = client.db("biblio_app_development");
-    return db.collection("biblio_200419"); // Keep existing collection name
+    const db = client.db("test");
+    return db.collection("biblio_200419");
   }
 
   static async createBibliography(

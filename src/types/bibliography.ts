@@ -1,5 +1,3 @@
-import { ObjectId } from "mongodb";
-
 export interface Bibliography {
   _id?: string;
   author: string;
