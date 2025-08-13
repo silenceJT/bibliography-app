@@ -114,50 +114,53 @@ export function RecentBibliographies({ data }: RecentBibliographiesProps) {
         ) : (
           <div className="space-y-4">
             {data.slice(0, 5).map((item) => (
-              <div
+              <Link
                 key={item._id}
-                className="flex items-start gap-4 p-4 rounded-lg border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all group"
+                href={`/bibliography/${item._id}`}
+                className="block"
               >
-                <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center">
-                    <BookOpen className="h-6 w-6 text-indigo-600" />
+                <div className="flex items-start gap-4 p-4 rounded-lg border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all group cursor-pointer">
+                  <div className="flex-shrink-0">
+                    <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center">
+                      <BookOpen className="h-6 w-6 text-indigo-600" />
+                    </div>
                   </div>
-                </div>
 
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <h4 className="text-sm font-medium text-gray-900 truncate group-hover:text-indigo-600 transition-colors">
-                        {item.title}
-                      </h4>
-                      <div className="flex items-center gap-4 mt-1 text-xs text-gray-500">
-                        <span className="flex items-center gap-1">
-                          <User className="h-3 w-3" />
-                          {item.author}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {getDisplayDate(item)}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-sm font-medium text-gray-900 truncate group-hover:text-indigo-600 transition-colors">
+                          {item.title}
+                        </h4>
+                        <div className="flex items-center gap-4 mt-1 text-xs text-gray-500">
+                          <span className="flex items-center gap-1">
+                            <User className="h-3 w-3" />
+                            {item.author}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {getDisplayDate(item)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`px-2 py-1 text-xs font-medium rounded-full ${getTypeBadge(item.publication).color}`}
+                        >
+                          {getTypeBadge(item.publication).text}
                         </span>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`px-2 py-1 text-xs font-medium rounded-full ${getTypeBadge(item.publication).color}`}
-                      >
-                        {getTypeBadge(item.publication).text}
-                      </span>
+                    <div className="mt-2 flex items-center gap-4 text-xs text-gray-500">
+                      <span>{item.year}</span>
+                      <span>{item.language_published}</span>
+                      <span className="truncate">{item.publication}</span>
                     </div>
                   </div>
-
-                  <div className="mt-2 flex items-center gap-4 text-xs text-gray-500">
-                    <span>{item.year}</span>
-                    <span>{item.language_published}</span>
-                    <span className="truncate">{item.publication}</span>
-                  </div>
                 </div>
-              </div>
+              </Link>
             ))}
 
             {data.length > 5 && (
