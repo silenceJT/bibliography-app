@@ -10,17 +10,28 @@ import { Download, Plus, Search, BookOpen } from "lucide-react";
 import Link from "next/link";
 
 export default function BibliographyPage() {
-  const { data, isLoading, error, refetch } = useBibliographyData();
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [sortBy, setSortBy] = useState("created_at");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [itemsPerPage, setItemsPerPage] = useState(20);
+
+  const { 
+    data, 
+    total, 
+    currentPage: hookPage, 
+    totalPages, 
+    isLoading, 
+    error, 
+    refetch, 
+    goToPage 
+  } = useBibliographyData(currentPage, itemsPerPage, sortBy, sortOrder);
 
   // Process data for display
   const processedData = {
     items: data || [],
-    total: (data || []).length,
-    totalPages: Math.ceil((data || []).length / 10),
+    total: total,
+    totalPages: totalPages,
   };
 
   const handleSort = (field: string) => {
@@ -30,11 +41,17 @@ export default function BibliographyPage() {
       setSortBy(field);
       setSortOrder("asc");
     }
+    setCurrentPage(1); // Reset to first page when sorting
   };
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
     setCurrentPage(1); // Reset to first page
+  };
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+    goToPage(newPage);
   };
 
   const handleExport = () => {
@@ -125,10 +142,79 @@ export default function BibliographyPage() {
             window.location.href = `/bibliography/${bibliography._id}`;
           }}
         />
+
+        {/* Pagination Controls */}
+        {processedData.totalPages > 1 && (
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+            {/* Items per page selector */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600">Show:</span>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => {
+                  setItemsPerPage(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="px-2 py-1 border border-gray-300 rounded-md text-sm"
+              >
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+              <span className="text-sm text-gray-600">entries</span>
+            </div>
+
+            {/* Page navigation */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="px-3 py-1 text-sm border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+              >
+                Previous
+              </button>
+              
+              <div className="flex items-center gap-1">
+                {Array.from({ length: Math.min(5, processedData.totalPages) }, (_, i) => {
+                  const pageNum = Math.max(1, Math.min(processedData.totalPages - 4, currentPage - 2)) + i;
+                  if (pageNum > processedData.totalPages) return null;
+                  
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => handlePageChange(pageNum)}
+                      className={`px-3 py-1 text-sm rounded-md ${
+                        pageNum === currentPage
+                          ? "bg-indigo-600 text-white"
+                          : "border border-gray-300 hover:bg-gray-50"
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+              </div>
+              
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === processedData.totalPages}
+                className="px-3 py-1 text-sm border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+              >
+                Next
+              </button>
+            </div>
+
+            {/* Page info */}
+            <div className="text-sm text-gray-600">
+              Page {currentPage} of {processedData.totalPages}
+            </div>
+          </div>
+        )}
       </SmartLoading>
 
-      {/* BRUTAL: Floating Action Button */}
-      <div className="fixed bottom-6 right-6 z-50">
+      {/* BRUTAL: Floating Action Button - moved higher to avoid covering pagination */}
+      <div className="fixed bottom-20 right-6 z-50">
         <Link
           href="/bibliography/new"
           className="flex items-center justify-center w-16 h-16 bg-indigo-600 text-white rounded-full shadow-lg hover:bg-indigo-700 hover:shadow-xl transition-all duration-200 transform hover:scale-110"

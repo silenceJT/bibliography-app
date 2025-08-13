@@ -87,9 +87,25 @@ const loadDashboardData = async (): Promise<DashboardData> => {
   return fetchWithErrorHandling("/api/dashboard/summary");
 };
 
-// Bibliography data loading
-const loadBibliographyData = async (): Promise<{ data: Bibliography[] }> => {
-  return fetchWithErrorHandling("/api/bibliography");
+// Bibliography data loading with pagination support
+const loadBibliographyData = async (
+  page: number = 1,
+  limit: number = 20,
+  sortBy: string = "created_at",
+  sortOrder: "asc" | "desc" = "desc"
+): Promise<{
+  data: Bibliography[];
+  total: number;
+  page: number;
+  totalPages: number;
+}> => {
+  const params = new URLSearchParams({
+    page: page.toString(),
+    limit: limit.toString(),
+    sortBy,
+    sortOrder,
+  });
+  return fetchWithErrorHandling(`/api/bibliography?${params}`);
 };
 
 // Generic hook factory to reduce duplication
@@ -203,11 +219,81 @@ export function useDashboardData() {
   return { data: displayData, isLoading, error, refetch, loadingStage };
 }
 
-// Bibliography hook using the factory pattern
-export const useBibliographyData = createDataHook(
-  bibliographyCache,
-  async () => {
-    const result = await loadBibliographyData();
-    return result.data || [];
-  }
-);
+// Bibliography hook using the factory pattern with pagination
+export const useBibliographyData = (
+  page: number = 1,
+  limit: number = 20,
+  sortBy: string = "created_at",
+  sortOrder: "asc" | "desc" = "desc"
+) => {
+  const [data, setData] = useState<Bibliography[] | null>(
+    bibliographyCache.getData()
+  );
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [currentPage, setCurrentPage] = useState(page);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(
+    bibliographyCache.getError()
+  );
+  const hasInitialized = useRef(false);
+
+  const refetch = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const result = await loadBibliographyData(
+        currentPage,
+        limit,
+        sortBy,
+        sortOrder
+      );
+
+      setData(result.data);
+      setTotal(result.total);
+      setTotalPages(result.totalPages);
+      setCurrentPage(result.page);
+
+      bibliographyCache.updateData(result.data);
+    } catch (err) {
+      const errorMessage = createErrorMessage(err);
+      setError(errorMessage);
+      bibliographyCache.setError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentPage, limit, sortBy, sortOrder]);
+
+  // Initial load and when parameters change
+  useEffect(() => {
+    if (hasInitialized.current) return;
+    hasInitialized.current = true;
+
+    if (!bibliographyCache.getData() || bibliographyCache.isStale()) {
+      refetch();
+    }
+  }, [refetch]);
+
+  // Refetch when parameters change
+  useEffect(() => {
+    if (hasInitialized.current) {
+      refetch();
+    }
+  }, [currentPage, limit, sortBy, sortOrder]);
+
+  const goToPage = useCallback((newPage: number) => {
+    setCurrentPage(newPage);
+  }, []);
+
+  return {
+    data,
+    total,
+    currentPage,
+    totalPages,
+    isLoading,
+    error,
+    refetch,
+    goToPage,
+  };
+};
