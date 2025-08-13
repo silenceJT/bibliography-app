@@ -4,10 +4,20 @@ export interface Bibliography {
   year: string;
   title: string;
   publication: string;
+  publisher?: string;
+  biblio_name?: string;
   language_published: string;
+  language_researched?: string;
   country_of_research?: string;
-  created_at?: Date; // Optional during transition period
-  updated_at?: Date | null; // Optional during transition period
+  keywords?: string;
+  isbn?: string;
+  issn?: string;
+  url?: string;
+  date_of_entry?: string;
+  language_family?: string;
+  source?: string;
+  created_at?: Date; // Not editable, auto-generated
+  updated_at?: Date | null; // Not editable, auto-updated
 }
 
 // BRUTAL: Only keep what we actually use

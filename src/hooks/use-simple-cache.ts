@@ -1,70 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { Bibliography } from "@/types/bibliography";
 
-// BRUTAL: Simple cache with request deduplication
-class SimpleCache<T> {
-  private data: T | null = null;
-  private loading = false;
-  private error: string | null = null;
-  private lastFetch: number = 0;
-  private readonly ttl: number; // Time to live in milliseconds
-
-  constructor(ttl: number = 5 * 60 * 1000) {
-    // 5 minutes default
-    this.ttl = ttl;
-  }
-
-  getData(): T | null {
-    return this.data;
-  }
-
-  isLoading(): boolean {
-    return this.loading;
-  }
-
-  getError(): string | null {
-    return this.error;
-  }
-
-  isStale(): boolean {
-    return Date.now() - this.lastFetch > this.ttl;
-  }
-
-  async fetch(fetchFn: () => Promise<T>): Promise<T> {
-    // BRUTAL: Prevent duplicate requests
-    if (this.loading) {
-      throw new Error("Request already in progress");
-    }
-
-    // BRUTAL: Use cached data if fresh
-    if (this.data && !this.isStale()) {
-      return this.data;
-    }
-
-    try {
-      this.loading = true;
-      this.error = null;
-
-      const newData = await fetchFn();
-      this.data = newData;
-      this.lastFetch = Date.now();
-
-      return newData;
-    } catch (err) {
-      this.error = err instanceof Error ? err.message : "Unknown error";
-      throw err;
-    } finally {
-      this.loading = false;
-    }
-  }
-
-  invalidate(): void {
-    this.data = null;
-    this.lastFetch = 0;
-  }
-}
-
-// BRUTAL: Global cache instances with proper types
-const dashboardCache = new SimpleCache<{
+// Dashboard data structure based on actual API response
+interface DashboardData {
   stats: {
     totalRecords: number;
     thisYear: number;
@@ -85,81 +23,191 @@ const dashboardCache = new SimpleCache<{
     language_published: string;
     created_at?: Date;
   }>;
-}>();
+}
 
-const bibliographyCache = new SimpleCache<
-  Array<{
-    _id: string;
-    title: string;
-    author: string;
-    year: string;
-    publication: string;
-    language_published: string;
-    country_of_research?: string;
-    created_at?: Date;
-    updated_at?: Date | null;
-  }>
->();
+// Simplified cache class - only what we actually need
+class SimpleCache<T> {
+  private data: T | null = null;
+  private error: string | null = null;
+  private lastFetch: number = 0;
+  private readonly ttl: number;
 
-// BRUTAL: Simple hook for dashboard data - NO POLLING
+  constructor(ttlMinutes: number = 5) {
+    this.ttl = ttlMinutes * 60 * 1000;
+  }
+
+  getData(): T | null {
+    return this.data;
+  }
+
+  getError(): string | null {
+    return this.error;
+  }
+
+  isStale(): boolean {
+    return Date.now() - this.lastFetch > this.ttl;
+  }
+
+  invalidate(): void {
+    this.data = null;
+    this.error = null;
+    this.lastFetch = 0;
+  }
+
+  updateData(newData: T): void {
+    this.data = newData;
+    this.error = null;
+    this.lastFetch = Date.now();
+  }
+
+  setError(errorMessage: string): void {
+    this.error = errorMessage;
+    this.lastFetch = Date.now();
+  }
+}
+
+// Cache instances
+const dashboardCache = new SimpleCache<DashboardData>(5);
+const bibliographyCache = new SimpleCache<Bibliography[]>(5);
+
+// Common error handling
+const createErrorMessage = (error: unknown): string => {
+  return error instanceof Error ? error.message : "Failed to fetch";
+};
+
+// Common fetch wrapper
+const fetchWithErrorHandling = async (url: string) => {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  return response.json();
+};
+
+// Dashboard data loading
+const loadDashboardData = async (): Promise<DashboardData> => {
+  return fetchWithErrorHandling("/api/dashboard/summary");
+};
+
+// Bibliography data loading
+const loadBibliographyData = async (): Promise<{ data: Bibliography[] }> => {
+  return fetchWithErrorHandling("/api/bibliography");
+};
+
+// Generic hook factory to reduce duplication
+function createDataHook<T>(
+  cache: SimpleCache<T>,
+  loadFn: () => Promise<T>,
+  initialData?: T
+) {
+  return () => {
+    const [data, setData] = useState<T | null>(
+      cache.getData() || initialData || null
+    );
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(cache.getError());
+    const hasInitialized = useRef(false);
+
+    const refetch = useCallback(async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        cache.invalidate();
+        const newData = await loadFn();
+
+        cache.updateData(newData);
+        setData(newData);
+      } catch (err) {
+        const errorMessage = createErrorMessage(err);
+        setError(errorMessage);
+        cache.setError(errorMessage);
+      } finally {
+        setIsLoading(false);
+      }
+    }, []);
+
+    // Initial load - only once on mount
+    useEffect(() => {
+      if (hasInitialized.current) return;
+      hasInitialized.current = true;
+
+      if (!cache.getData() || cache.isStale()) {
+        refetch();
+      }
+    }, [refetch]);
+
+    return { data, isLoading, error, refetch };
+  };
+}
+
+// Dashboard hook with progressive loading and optimistic updates
 export function useDashboardData() {
-  const [data, setData] = useState(dashboardCache.getData());
-  const [isLoading, setIsLoading] = useState(dashboardCache.isLoading());
-  const [error, setError] = useState(dashboardCache.getError());
+  const [data, setData] = useState<DashboardData | null>(
+    dashboardCache.getData()
+  );
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(dashboardCache.getError());
+  const [loadingStage, setLoadingStage] = useState<
+    "idle" | "critical" | "detailed"
+  >("idle");
+  const [optimisticData, setOptimisticData] = useState<DashboardData | null>(
+    data
+  );
+  const hasInitialized = useRef(false);
+  const dataRef = useRef(data);
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    dataRef.current = data;
+  }, [data]);
+
+  const displayData = optimisticData || data;
 
   const refetch = useCallback(async () => {
     try {
-      const newData = await dashboardCache.fetch(async () => {
-        const response = await fetch("/api/dashboard/summary");
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        return response.json();
-      });
+      setIsLoading(true);
+      setError(null);
+      setLoadingStage("critical");
+
+      // Optimistic update
+      if (dataRef.current) {
+        setOptimisticData(dataRef.current);
+      }
+
+      dashboardCache.invalidate();
+      const newData = await loadDashboardData();
 
       setData(newData);
-      setError(null);
+      setOptimisticData(null);
+      dashboardCache.updateData(newData);
+      setLoadingStage("idle");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch");
+      const errorMessage = createErrorMessage(err);
+      setError(errorMessage);
+      setLoadingStage("idle");
+      setOptimisticData(null);
+    } finally {
+      setIsLoading(false);
     }
-  }, []); // Empty dependency array for stable reference
+  }, []);
 
-  // BRUTAL: Only fetch once on mount if needed - NO DEPENDENCIES
+  // Initial load
   useEffect(() => {
+    if (hasInitialized.current) return;
+    hasInitialized.current = true;
+
     if (!dashboardCache.getData() || dashboardCache.isStale()) {
       refetch();
     }
-  }, []); // Empty dependency array for single execution
+  }, [refetch]);
 
-  return { data, isLoading, error, refetch };
+  return { data: displayData, isLoading, error, refetch, loadingStage };
 }
 
-// BRUTAL: Simple hook for bibliography data - NO POLLING
-export function useBibliographyData() {
-  const [data, setData] = useState(bibliographyCache.getData());
-  const [isLoading, setIsLoading] = useState(bibliographyCache.isLoading());
-  const [error, setError] = useState(bibliographyCache.getError());
-
-  const refetch = useCallback(async () => {
-    try {
-      const newData = await bibliographyCache.fetch(async () => {
-        const response = await fetch("/api/bibliography");
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const result = await response.json();
-        return result.data || []; // Handle paginated response
-      });
-
-      setData(newData);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch");
-    }
-  }, []); // Empty dependency array for stable reference
-
-  // BRUTAL: Only fetch once on mount if needed - NO DEPENDENCIES
-  useEffect(() => {
-    if (!bibliographyCache.getData() || bibliographyCache.isStale()) {
-      refetch();
-    }
-  }, []); // Empty dependency array for single execution
-
-  return { data, isLoading, error, refetch };
-}
+// Bibliography hook using the factory pattern
+export const useBibliographyData = createDataHook(
+  bibliographyCache,
+  async () => {
+    const result = await loadBibliographyData();
+    return result.data || [];
+  }
+);
