@@ -20,7 +20,7 @@ export default function DashboardPage() {
         error={error}
         data={data}
         onRefetch={refetch}
-        skeletonType="custom"
+        skeletonType="grid"
         customSkeleton={<DashboardSkeleton loadingStage={loadingStage} />}
         emptyMessage="No research data available yet. Start by adding your first bibliography entry!"
         emptyIcon={<BookOpen className="h-8 w-8 text-gray-400" />}
@@ -31,6 +31,9 @@ export default function DashboardPage() {
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Research Dashboard</h1>
             <p className="text-gray-600 mt-1">Overview of your bibliography database</p>
+            <div className="flex items-center gap-2 mt-2">
+              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">Reports feature in development</span>
+            </div>
           </div>
           <button
             onClick={refetch}
@@ -52,10 +55,16 @@ export default function DashboardPage() {
             <Search className="h-6 w-6 text-green-600 mb-2" />
             <div className="font-medium text-green-900">Search</div>
           </Link>
-          <Link href="/dashboard/reports" className="p-4 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors">
-            <BarChart3 className="h-6 w-6 text-purple-600 mb-2" />
-            <div className="font-medium text-purple-900">Reports</div>
-          </Link>
+          
+          {/* Reports Feature - Currently in Development */}
+          <div className="p-4 bg-gray-50 rounded-lg border border-gray-200 cursor-not-allowed opacity-60 relative">
+            <div className="absolute -top-2 -right-2 bg-yellow-500 text-white text-xs px-2 py-1 rounded-full font-medium">
+              DEV
+            </div>
+            <BarChart3 className="h-6 w-6 text-gray-400 mb-2" />
+            <div className="font-medium text-gray-500">Reports</div>
+            <div className="text-xs text-gray-400 mt-1">Coming Soon</div>
+          </div>
           <Link href="/dashboard/users" className="p-4 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors">
             <Users className="h-6 w-6 text-orange-600 mb-2" />
             <div className="font-medium text-orange-900">Users</div>
