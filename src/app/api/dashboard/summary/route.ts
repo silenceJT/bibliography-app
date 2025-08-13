@@ -14,15 +14,20 @@ export async function GET() {
     const db = client.db("test");
     const collection = db.collection("biblio_200419");
 
-    // BRUTALLY SIMPLIFIED: Just what we actually need
+    // BRUTAL: Only fetch what dashboard actually needs
     const pipeline = [
       {
         $facet: {
+          // Total records
           totalRecords: [{ $count: "count" }],
+
+          // This year records
           thisYear: [
             { $match: { year: new Date().getFullYear().toString() } },
             { $count: "count" },
           ],
+
+          // Language distribution (top 10)
           languages: [
             { $match: { language_published: { $exists: true, $ne: "" } } },
             { $group: { _id: "$language_published", count: { $sum: 1 } } },
@@ -30,16 +35,21 @@ export async function GET() {
             { $limit: 10 },
             { $project: { language: "$_id", count: 1, _id: 0 } },
           ],
+
+          // Unique counts
           uniqueLanguages: [
             { $group: { _id: "$language_published" } },
             { $match: { _id: { $exists: true, $ne: "" } } },
             { $count: "count" },
           ],
+
           uniqueCountries: [
             { $group: { _id: "$country_of_research" } },
             { $match: { _id: { $exists: true, $ne: "" } } },
             { $count: "count" },
           ],
+
+          // Recent items (minimal fields)
           recentItems: [
             { $sort: { _id: -1 } },
             { $limit: 10 },
@@ -51,6 +61,7 @@ export async function GET() {
                 year: 1,
                 publication: 1,
                 language_published: 1,
+                created_at: 1,
               },
             },
           ],
@@ -94,7 +105,7 @@ export async function GET() {
       recentItems,
     });
   } catch (error) {
-    console.error("Error fetching dashboard overview:", error);
+    console.error("Dashboard summary error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

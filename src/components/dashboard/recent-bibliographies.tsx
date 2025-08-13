@@ -2,25 +2,61 @@
 
 import { BookOpen, User, Clock, FileText } from "lucide-react";
 import Link from "next/link";
-import { getRelativeTimeFromObjectId } from "@/utils/objectid";
+// No imports needed for timestamp handling
 
 interface RecentBibliographiesProps {
-  data?: Array<{
-    _id: string;
-    title: string;
-    author: string;
-    year: string;
-    publication: string;
-    language_published: string;
-    created_at?: Date;
-  }>;
+  data:
+    | Array<{
+        _id: string;
+        title: string;
+        author: string;
+        year: string;
+        publication: string;
+        language_published: string;
+        created_at?: Date;
+      }>
+    | null
+    | undefined;
 }
 
 export function RecentBibliographies({ data }: RecentBibliographiesProps) {
   if (!data) return null;
 
-  const getDisplayDate = (item: { _id: string }) => {
-    return item._id ? getRelativeTimeFromObjectId(item._id) : "Unknown date";
+  const getDisplayDate = (item: { created_at?: Date | string; _id?: string }) => {
+    if (item.created_at) {
+      const date = new Date(item.created_at);
+      const now = new Date();
+      const diffTime = Math.abs(now.getTime() - date.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      if (diffDays === 1) return "Yesterday";
+      if (diffDays < 7) return `${diffDays} days ago`;
+      if (diffDays < 30) return `${Math.ceil(diffDays / 7)} weeks ago`;
+      if (diffDays < 365) return `${Math.ceil(diffDays / 30)} months ago`;
+      return `${Math.ceil(diffDays / 365)} years ago`;
+    }
+    
+    // BRUTAL: Fallback to ObjectId timestamp if created_at is missing
+    if (item._id && item._id.length >= 8) {
+      try {
+        const timestampHex = item._id.substring(0, 8);
+        const timestamp = parseInt(timestampHex, 16);
+        const date = new Date(timestamp * 1000);
+        const now = new Date();
+        const diffTime = Math.abs(now.getTime() - date.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        if (diffDays === 1) return "Yesterday";
+        if (diffDays < 7) return `${diffDays} days ago`;
+        if (diffDays < 30) return `${Math.ceil(diffDays / 7)} weeks ago`;
+        if (diffDays < 365) return `${Math.ceil(diffDays / 30)} months ago`;
+        return `${Math.ceil(diffDays / 365)} years ago`;
+      } catch (error) {
+        // Fall through to "Unknown date"
+      }
+    }
+    
+    return "Unknown date";
   };
 
   const getTypeBadge = (publication?: string) => {

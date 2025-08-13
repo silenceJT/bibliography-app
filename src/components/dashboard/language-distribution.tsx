@@ -3,11 +3,14 @@
 import { Globe, Download } from "lucide-react";
 
 interface LanguageDistributionProps {
-  data?: Array<{
-    language: string;
-    count: number;
-    percentage: number;
-  }>;
+  data:
+    | Array<{
+        language: string;
+        count: number;
+        percentage: number;
+      }>
+    | null
+    | undefined;
 }
 
 export function LanguageDistribution({ data }: LanguageDistributionProps) {

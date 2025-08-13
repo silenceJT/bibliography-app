@@ -5,10 +5,16 @@ import { Search, BookOpen, Calendar, Globe, Tag } from "lucide-react";
 import { Bibliography } from "@/types/bibliography";
 
 interface SearchResultsProps {
-  results: Bibliography[];
-  total: number;
+  results: Array<{
+    _id: string;
+    title: string;
+    author: string;
+    year: string;
+    publication: string;
+    language_published: string;
+  }>;
   isLoading: boolean;
-  onResultClick: (bibliography: Bibliography) => void;
+  onResultClick: (bibliography: { _id: string }) => void;
 }
 
 export function SearchResults({
@@ -48,7 +54,7 @@ export function SearchResults({
         <div>
           <h2 className="text-lg font-medium text-gray-900">Search Results</h2>
           <p className="text-sm text-gray-500">
-            {total} result{total !== 1 ? "s" : ""} found
+            {results.length} result{results.length !== 1 ? "s" : ""} found
           </p>
         </div>
 
@@ -178,12 +184,7 @@ export function SearchResults({
                     </div>
                   )}
 
-                  {item.keywords && (
-                    <div className="flex items-center">
-                      <Tag className="w-4 h-4 mr-2" />
-                      <span className="truncate">{item.keywords}</span>
-                    </div>
-                  )}
+
                 </div>
               </>
             )}

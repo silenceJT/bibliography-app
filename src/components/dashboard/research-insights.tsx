@@ -3,7 +3,7 @@
 import { BookOpen, Globe, Target, TrendingUp } from "lucide-react";
 
 interface ResearchInsightsProps {
-  data?: {
+  data: {
     stats: {
       totalRecords: number;
       thisYear: number;
@@ -15,7 +15,7 @@ interface ResearchInsightsProps {
       count: number;
       percentage: number;
     }>;
-  };
+  } | null;
 }
 
 export function ResearchInsights({ data }: ResearchInsightsProps) {

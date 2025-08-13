@@ -1,14 +1,16 @@
 "use client";
 
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
-import { ResearchInsights } from "@/components/dashboard/research-insights-simplified";
-import { LanguageDistribution } from "@/components/dashboard/language-distribution-simplified";
-import { RecentBibliographies } from "@/components/dashboard/recent-bibliographies-simplified";
-import { useDashboardData } from "@/hooks/use-dashboard-data";
+import { ResearchInsights } from "@/components/dashboard/research-insights";
+import { LanguageDistribution } from "@/components/dashboard/language-distribution";
+import { RecentBibliographies } from "@/components/dashboard/recent-bibliographies";
+import { useDashboardData } from "@/hooks/use-simple-cache";
 import { Search, Plus, RefreshCw, BarChart3, Users } from "lucide-react";
 
 export default function DashboardPage() {
   const { data, isLoading, error, refetch } = useDashboardData();
+
+
 
   if (isLoading) {
     return (
