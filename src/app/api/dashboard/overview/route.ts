@@ -14,57 +14,32 @@ export async function GET() {
     const db = client.db("test");
     const collection = db.collection("biblio_200419");
 
-    // SIMPLIFIED: Just the essential data we need
+    // BRUTALLY SIMPLIFIED: Just what we actually need
     const pipeline = [
       {
         $facet: {
-          // Total records
           totalRecords: [{ $count: "count" }],
-
-          // This year records
           thisYear: [
             { $match: { year: new Date().getFullYear().toString() } },
             { $count: "count" },
           ],
-
-          // Language distribution (top 10)
           languages: [
-            {
-              $match: {
-                language_published: { $exists: true, $ne: "" },
-              },
-            },
-            {
-              $group: {
-                _id: "$language_published",
-                count: { $sum: 1 },
-              },
-            },
+            { $match: { language_published: { $exists: true, $ne: "" } } },
+            { $group: { _id: "$language_published", count: { $sum: 1 } } },
             { $sort: { count: -1 } },
             { $limit: 10 },
-            {
-              $project: {
-                language: "$_id",
-                count: 1,
-                _id: 0,
-              },
-            },
+            { $project: { language: "$_id", count: 1, _id: 0 } },
           ],
-
-          // Unique counts (simplified)
           uniqueLanguages: [
             { $group: { _id: "$language_published" } },
             { $match: { _id: { $exists: true, $ne: "" } } },
             { $count: "count" },
           ],
-
           uniqueCountries: [
             { $group: { _id: "$country_of_research" } },
             { $match: { _id: { $exists: true, $ne: "" } } },
             { $count: "count" },
           ],
-
-          // Recent items (minimal fields)
           recentItems: [
             { $sort: { _id: -1 } },
             { $limit: 10 },
