@@ -17,8 +17,35 @@ export async function GET(request: NextRequest) {
     const sortOrder = (searchParams.get("sortOrder") || "desc") as
       | "asc"
       | "desc";
+    
+    // Extract search query and filters
+    const query = searchParams.get("q") || "";
+    const filters: Record<string, string> = {};
+    
+    // Extract filter parameters
+    const filterKeys = [
+      "year",
+      "publication", 
+      "publisher",
+      "language_published",
+      "language_researched",
+      "country_of_research",
+      "keywords",
+      "biblio_name",
+      "source",
+      "language_family",
+    ];
 
-    const result = await BibliographyService.getAllBibliographies(
+    filterKeys.forEach((key) => {
+      const value = searchParams.get(key);
+      if (value && value.trim()) {
+        filters[key] = value.trim();
+      }
+    });
+
+    const result = await BibliographyService.searchBibliographies(
+      query,
+      filters,
       page,
       limit,
       sortBy,

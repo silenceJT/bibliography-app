@@ -87,12 +87,14 @@ const loadDashboardData = async (): Promise<DashboardData> => {
   return fetchWithErrorHandling("/api/dashboard/summary");
 };
 
-// Bibliography data loading with pagination support
+// Bibliography data loading with search, filters, pagination, and sorting
 const loadBibliographyData = async (
   page: number = 1,
   limit: number = 20,
   sortBy: string = "created_at",
-  sortOrder: "asc" | "desc" = "desc"
+  sortOrder: "asc" | "desc" = "desc",
+  query: string = "",
+  filters: Record<string, string> = {}
 ): Promise<{
   data: Bibliography[];
   total: number;
@@ -105,6 +107,19 @@ const loadBibliographyData = async (
     sortBy,
     sortOrder,
   });
+
+  // Add search query
+  if (query.trim()) {
+    params.append("q", query.trim());
+  }
+
+  // Add filters
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value && value.trim()) {
+      params.append(key, value.trim());
+    }
+  });
+
   return fetchWithErrorHandling(`/api/bibliography?${params}`);
 };
 
@@ -219,19 +234,20 @@ export function useDashboardData() {
   return { data: displayData, isLoading, error, refetch, loadingStage };
 }
 
-// Bibliography hook using the factory pattern with pagination
+// Bibliography hook with search, filters, pagination, and sorting
 export const useBibliographyData = (
   page: number = 1,
   limit: number = 20,
   sortBy: string = "created_at",
-  sortOrder: "asc" | "desc" = "desc"
+  sortOrder: "asc" | "desc" = "desc",
+  query: string = "",
+  filters: Record<string, string> = {}
 ) => {
   const [data, setData] = useState<Bibliography[] | null>(
     bibliographyCache.getData()
   );
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-  const [currentPage, setCurrentPage] = useState(page);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(
     bibliographyCache.getError()
@@ -244,16 +260,17 @@ export const useBibliographyData = (
       setError(null);
 
       const result = await loadBibliographyData(
-        currentPage,
+        page,
         limit,
         sortBy,
-        sortOrder
+        sortOrder,
+        query,
+        filters
       );
 
       setData(result.data);
       setTotal(result.total);
       setTotalPages(result.totalPages);
-      setCurrentPage(result.page);
 
       bibliographyCache.updateData(result.data);
     } catch (err) {
@@ -263,7 +280,7 @@ export const useBibliographyData = (
     } finally {
       setIsLoading(false);
     }
-  }, [currentPage, limit, sortBy, sortOrder]);
+  }, [page, limit, sortBy, sortOrder, query, filters]);
 
   // Initial load and when parameters change
   useEffect(() => {
@@ -280,16 +297,16 @@ export const useBibliographyData = (
     if (hasInitialized.current) {
       refetch();
     }
-  }, [currentPage, limit, sortBy, sortOrder]);
+  }, [refetch]);
 
   const goToPage = useCallback((newPage: number) => {
-    setCurrentPage(newPage);
+    // This will trigger a refetch with the new page
+    // The parent component should update its page state
   }, []);
 
   return {
     data,
     total,
-    currentPage,
     totalPages,
     isLoading,
     error,

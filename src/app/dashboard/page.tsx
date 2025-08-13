@@ -51,7 +51,7 @@ export default function DashboardPage() {
             <Plus className="h-6 w-6 text-blue-600 mb-2" />
             <div className="font-medium text-blue-900">Add Entry</div>
           </Link>
-          <Link href="/bibliography/search" className="p-4 bg-green-50 rounded-lg hover:bg-green-100 transition-colors">
+          <Link href="/bibliography" className="p-4 bg-green-50 rounded-lg hover:bg-green-100 transition-colors">
             <Search className="h-6 w-6 text-green-600 mb-2" />
             <div className="font-medium text-green-900">Search</div>
           </Link>

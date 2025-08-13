@@ -5,9 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import {
-  BookOpen,
-  Search,
   BarChart3,
+  BookOpen,
   Settings,
   Menu,
   X,
@@ -27,7 +26,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: BarChart3 },
     { name: "Bibliography", href: "/bibliography", icon: BookOpen },
-    { name: "Search", href: "/bibliography/search", icon: Search },
     { name: "Settings", href: "/settings", icon: Settings },
   ];
 

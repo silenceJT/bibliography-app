@@ -109,7 +109,9 @@ export class BibliographyService {
     query: string,
     filters: BibliographyFilters = {},
     page: number = 1,
-    limit: number = 20
+    limit: number = 20,
+    sortBy: string = "created_at",
+    sortOrder: "asc" | "desc" = "desc"
   ): Promise<BibliographySearchResult> {
     const collection = await this.getCollection();
 
@@ -151,12 +153,13 @@ export class BibliographyService {
     });
 
     const skip = (page - 1) * limit;
+    const sortDirection = sortOrder === "asc" ? 1 : -1;
 
     // Execute search and count in parallel
     const [data, total] = await Promise.all([
       collection
         .find(searchQuery)
-        .sort({ created_at: -1 })
+        .sort({ [sortBy]: sortDirection })
         .skip(skip)
         .limit(limit)
         .toArray(),
