@@ -2,11 +2,16 @@ import clientPromise from "./mongodb";
 import { ObjectId } from "mongodb";
 import {
   Bibliography,
-  BibliographyCreate,
-  BibliographyUpdate,
   BibliographySearchResult,
-  BibliographyFilters,
 } from "@/types/bibliography";
+
+// Define local types for internal use
+type BibliographyCreate = Omit<Bibliography, '_id'> & {
+  created_at: Date;
+  updated_at: Date;
+};
+type BibliographyUpdate = Partial<Omit<Bibliography, '_id' | 'created_at' | 'updated_at'>>;
+type BibliographyFilters = Record<string, string>;
 
 export class BibliographyService {
   private static async getCollection() {
@@ -108,33 +113,46 @@ export class BibliographyService {
   ): Promise<BibliographySearchResult> {
     const collection = await this.getCollection();
 
-    // Build search query
-    const searchQuery: any = {};
+    // Build search query efficiently
+    const searchQuery: Record<string, unknown> = {};
 
-    if (query) {
+    // Add text search if query exists
+    if (query.trim()) {
       searchQuery.$or = [
-        { title: { $regex: query, $options: "i" } },
-        { author: { $regex: query, $options: "i" } },
-        { publication: { $regex: query, $options: "i" } },
-        { keywords: { $regex: query, $options: "i" } },
+        { title: { $regex: query.trim(), $options: "i" } },
+        { author: { $regex: query.trim(), $options: "i" } },
+        { publication: { $regex: query.trim(), $options: "i" } },
+        { keywords: { $regex: query.trim(), $options: "i" } },
       ];
     }
 
-    // Apply filters
+    // Add filters efficiently - all filters use simple logic
     Object.entries(filters).forEach(([key, value]) => {
-      if (value && value !== "") {
+      if (value && value.trim()) {
         if (key === "year") {
-          searchQuery[key] = { $regex: value, $options: "i" };
-        } else if (key === "keywords") {
-          searchQuery[key] = { $regex: value, $options: "i" };
+          // Simple year filtering - support ranges and exact matches
+          const yearValue = value.trim();
+          
+          if (yearValue.includes("-")) {
+            const [startYear, endYear] = yearValue.split("-").map(y => parseInt(y.trim()));
+            if (!isNaN(startYear) && !isNaN(endYear) && startYear <= endYear) {
+              searchQuery[key] = { $gte: startYear, $lte: endYear };
+            }
+          } else {
+            const year = parseInt(yearValue);
+            if (!isNaN(year)) {
+              searchQuery[key] = year;
+            }
+          }
         } else {
-          searchQuery[key] = { $regex: value, $options: "i" };
+          searchQuery[key] = { $regex: value.trim(), $options: "i" };
         }
       }
     });
 
     const skip = (page - 1) * limit;
 
+    // Execute search and count in parallel
     const [data, total] = await Promise.all([
       collection
         .find(searchQuery)

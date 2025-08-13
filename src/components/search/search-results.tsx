@@ -5,16 +5,11 @@ import { Search, BookOpen, Calendar, Globe, Tag } from "lucide-react";
 import { Bibliography } from "@/types/bibliography";
 
 interface SearchResultsProps {
-  results: Array<{
-    _id: string;
-    title: string;
-    author: string;
-    year: string;
-    publication: string;
-    language_published: string;
-  }>;
+  results: Bibliography[];
+  total: number;
   isLoading: boolean;
-  onResultClick: (bibliography: { _id: string }) => void;
+  onResultClick: (bibliography: Bibliography) => void;
+  hasSearched?: boolean; // New prop to distinguish initial state
 }
 
 export function SearchResults({
@@ -22,6 +17,7 @@ export function SearchResults({
   total,
   isLoading,
   onResultClick,
+  hasSearched = false,
 }: SearchResultsProps) {
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
 
@@ -34,17 +30,33 @@ export function SearchResults({
   }
 
   if (results.length === 0) {
-    return (
-      <div className="text-center py-12">
-        <Search className="mx-auto h-12 w-12 text-gray-400" />
-        <h3 className="mt-2 text-sm font-medium text-gray-900">
-          No results found
-        </h3>
-        <p className="mt-1 text-sm text-gray-500">
-          Try adjusting your search terms or filters.
-        </p>
-      </div>
-    );
+    if (!hasSearched) {
+      // Initial state - no search performed yet
+      return (
+        <div className="text-center py-12">
+          <Search className="mx-auto h-12 w-12 text-gray-400" />
+          <h3 className="mt-2 text-sm font-medium text-gray-900">
+            Start your search
+          </h3>
+          <p className="mt-1 text-sm text-gray-500">
+            Enter keywords above to find bibliography entries
+          </p>
+        </div>
+      );
+    } else {
+      // No results found after search
+      return (
+        <div className="text-center py-12">
+          <Search className="mx-auto h-12 w-12 text-gray-400" />
+          <h3 className="mt-2 text-sm font-medium text-gray-900">
+            No results found
+          </h3>
+          <p className="mt-1 text-sm text-gray-500">
+            Try adjusting your search terms or filters.
+          </p>
+        </div>
+      );
+    }
   }
 
   return (
@@ -54,7 +66,7 @@ export function SearchResults({
         <div>
           <h2 className="text-lg font-medium text-gray-900">Search Results</h2>
           <p className="text-sm text-gray-500">
-            {results.length} result{results.length !== 1 ? "s" : ""} found
+            {total} result{total !== 1 ? "s" : ""} found
           </p>
         </div>
 

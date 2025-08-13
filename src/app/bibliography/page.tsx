@@ -49,7 +49,6 @@ export default function BibliographyPage() {
         error={error}
         data={data}
         onRefetch={refetch}
-        skeletonType="custom"
         customSkeleton={<BibliographyTableSkeleton />}
         emptyMessage="No bibliography entries found. Start building your research database!"
         emptyIcon={<BookOpen className="h-8 w-8 text-gray-400" />}
@@ -119,6 +118,7 @@ export default function BibliographyPage() {
         {/* Results */}
         <SearchResults
           results={processedData.items}
+          total={processedData.total}
           isLoading={isLoading}
           onResultClick={(bibliography) => {
             // Navigate to bibliography detail page

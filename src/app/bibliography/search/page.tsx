@@ -1,30 +1,55 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { SearchForm } from "@/components/search/search-form";
 import { SearchResults } from "@/components/search/search-results";
 import { Pagination } from "@/components/ui/pagination";
-import { Bibliography, BibliographyFilters } from "@/types/bibliography";
+import { Bibliography } from "@/types/bibliography";
 import { Download } from "lucide-react";
+
+type BibliographyFilters = Record<string, string>;
 
 export default function SearchPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  
+  // SIMPLIFIED STATE - Single source of truth
+  const [searchData, setSearchData] = useState({
+    query: "",
+    filters: {} as BibliographyFilters,
+    page: 1,
+    results: [] as Bibliography[],
+    total: 0,
+    totalPages: 1,
+    isLoading: false,
+    hasSearched: false,
+  });
 
-  const [results, setResults] = useState<Bibliography[]>([]);
-  const [total, setTotal] = useState(0);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [isLoading, setIsLoading] = useState(false);
-
-  const performSearch = async (
+  // SINGLE SEARCH FUNCTION - Clean and efficient
+  const performSearch = useCallback(async (
     query: string,
     filters: BibliographyFilters,
     page: number = 1
   ) => {
-    setIsLoading(true);
+    // Don't search if empty and no filters
+    const hasActiveFilters = Object.values(filters).some(v => v.trim());
+    if (!query.trim() && !hasActiveFilters) {
+      setSearchData(prev => ({
+        ...prev,
+        query: "",
+        filters: {},
+        page: 1,
+        results: [],
+        total: 0,
+        totalPages: 1,
+        hasSearched: false,
+      }));
+      return;
+    }
+
+    setSearchData(prev => ({ ...prev, isLoading: true }));
+
     try {
       const params = new URLSearchParams({
         q: query,
@@ -32,57 +57,56 @@ export default function SearchPage() {
         ...filters,
       });
 
-      const response = await fetch(
-        `/api/bibliography/search?${params.toString()}`
-      );
+      const response = await fetch(`/api/bibliography/search?${params}`);
       if (!response.ok) throw new Error("Search failed");
 
       const data = await response.json();
-      setResults(data.data);
-      setTotal(data.total);
-      setTotalPages(data.totalPages);
-      setCurrentPage(data.page);
-
-      // Update URL with search params
-      const newUrl = `/bibliography/search?${params.toString()}`;
-      router.push(newUrl);
+      
+      setSearchData(prev => ({
+        ...prev,
+        query,
+        filters,
+        page,
+        results: data.data,
+        total: data.total,
+        totalPages: data.totalPages,
+        hasSearched: true,
+        isLoading: false,
+      }));
     } catch (error) {
       console.error("Search error:", error);
-      setResults([]);
-      setTotal(0);
-      setTotalPages(1);
-    } finally {
-      setIsLoading(false);
+      setSearchData(prev => ({
+        ...prev,
+        results: [],
+        total: 0,
+        totalPages: 1,
+        isLoading: false,
+      }));
     }
-  };
+  }, []);
 
-  const handlePageChange = (page: number) => {
-    const query = searchParams.get("q") || "";
-    const filters: BibliographyFilters = {
-      year: searchParams.get("year") || "",
-      publication: searchParams.get("publication") || "",
-      publisher: searchParams.get("publisher") || "",
-      language_published: searchParams.get("language_published") || "",
-      language_researched: searchParams.get("language_researched") || "",
-      country_of_research: searchParams.get("country_of_research") || "",
-      keywords: searchParams.get("keywords") || "",
-      biblio_name: searchParams.get("biblio_name") || "",
-      source: searchParams.get("source") || "",
-      language_family: searchParams.get("language_family") || "",
-    };
-    performSearch(query, filters, page);
-  };
+  // SIMPLE HANDLERS
+  const handleSearch = useCallback((query: string, filters: BibliographyFilters) => {
+    performSearch(query, filters, 1);
+  }, [performSearch]);
 
-  const handleResultClick = (bibliography: Bibliography) => {
+  const handlePageChange = useCallback((page: number) => {
+    performSearch(searchData.query, searchData.filters, page);
+  }, [performSearch, searchData.query, searchData.filters]);
+
+  const handleResultClick = useCallback((bibliography: Bibliography) => {
     router.push(`/bibliography/${bibliography._id}`);
-  };
+  }, [router]);
 
-  const handleExport = async () => {
+  const handleExport = useCallback(async () => {
     try {
-      const params = new URLSearchParams(searchParams);
-      const response = await fetch(
-        `/api/bibliography/export?${params.toString()}`
-      );
+      const params = new URLSearchParams({
+        q: searchData.query,
+        page: searchData.page.toString(),
+        ...searchData.filters,
+      });
+      
+      const response = await fetch(`/api/bibliography/export?${params}`);
       if (!response.ok) throw new Error("Export failed");
 
       const blob = await response.blob();
@@ -98,30 +122,7 @@ export default function SearchPage() {
       console.error("Export error:", error);
       alert("Export failed. Please try again.");
     }
-  };
-
-  // Initialize search from URL params on mount
-  useEffect(() => {
-    const query = searchParams.get("q") || "";
-    const page = parseInt(searchParams.get("page") || "1");
-
-    const filters: BibliographyFilters = {
-      year: searchParams.get("year") || "",
-      publication: searchParams.get("publication") || "",
-      publisher: searchParams.get("publisher") || "",
-      language_published: searchParams.get("language_published") || "",
-      language_researched: searchParams.get("language_researched") || "",
-      country_of_research: searchParams.get("country_of_research") || "",
-      keywords: searchParams.get("keywords") || "",
-      biblio_name: searchParams.get("biblio_name") || "",
-      source: searchParams.get("source") || "",
-      language_family: searchParams.get("language_family") || "",
-    };
-
-    if (query || Object.values(filters).some((v) => v)) {
-      performSearch(query, filters, page);
-    }
-  }, [searchParams]);
+  }, [searchData]);
 
   return (
     <DashboardLayout>
@@ -137,7 +138,7 @@ export default function SearchPage() {
             </p>
           </div>
 
-          {total > 0 && (
+          {searchData.total > 0 && (
             <button
               onClick={handleExport}
               className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
@@ -153,23 +154,24 @@ export default function SearchPage() {
           <div className="px-4 sm:px-0">
             {/* Search Form */}
             <div className="mb-8">
-              <SearchForm onSearch={performSearch} />
+              <SearchForm onSearch={handleSearch} />
             </div>
 
             {/* Search Results */}
             <div className="bg-white shadow rounded-lg">
               <SearchResults
-                results={results}
-                total={total}
-                isLoading={isLoading}
+                results={searchData.results}
+                total={searchData.total}
+                isLoading={searchData.isLoading}
                 onResultClick={handleResultClick}
+                hasSearched={searchData.hasSearched}
               />
 
               {/* Pagination */}
-              {totalPages > 1 && (
+              {searchData.totalPages > 1 && (
                 <Pagination
-                  currentPage={currentPage}
-                  totalPages={totalPages}
+                  currentPage={searchData.page}
+                  totalPages={searchData.totalPages}
                   onPageChange={handlePageChange}
                 />
               )}
