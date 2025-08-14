@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import clientPromise from "@/lib/mongodb";
 
@@ -14,7 +14,7 @@ export async function GET() {
     const db = client.db("test");
     const collection = db.collection("biblio_200419");
 
-    // BRUTAL: Only fetch what dashboard actually needs
+    // BRUTAL: Fetch full Bibliography objects for consistent card display
     const pipeline = [
       {
         $facet: {
@@ -49,21 +49,11 @@ export async function GET() {
             { $count: "count" },
           ],
 
-          // Recent items (minimal fields)
+          // Recent items - BRUTAL: Return full Bibliography objects
           recentItems: [
             { $sort: { _id: -1 } },
             { $limit: 10 },
-            {
-              $project: {
-                _id: 1,
-                title: 1,
-                author: 1,
-                year: 1,
-                publication: 1,
-                language_published: 1,
-                created_at: 1,
-              },
-            },
+            // No projection - return all fields for full Bibliography objects
           ],
         },
       },

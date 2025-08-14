@@ -6,15 +6,25 @@ import { SmartLoading } from "@/components/ui/smart-loading";
 import { useBibliographyData } from "@/hooks/use-simple-cache";
 import { Bibliography } from "@/types/bibliography";
 import { useDebounce } from "@/hooks/use-debounce";
-import { Filter, X, ChevronDown, ChevronUp, BookOpen, Search, Calendar, Plus } from "lucide-react";
+import {
+  Filter,
+  X,
+  ChevronDown,
+  ChevronUp,
+  BookOpen,
+  Search,
+  Calendar,
+  Plus,
+} from "lucide-react";
 import Link from "next/link";
+import { BibliographyCard } from "@/components/ui/bibliography-card";
 
 export default function BibliographyPage() {
   // Search and filter state
   const [query, setQuery] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<Record<string, string>>({});
-  
+
   // Pagination and sorting state
   const [currentPage, setCurrentPage] = useState(1);
   const [sortBy, setSortBy] = useState("created_at");
@@ -27,18 +37,19 @@ export default function BibliographyPage() {
 
   // Track if search or filters are being debounced
   const isSearching = query !== debouncedQuery;
-  const isFiltering = JSON.stringify(filters) !== JSON.stringify(debouncedFilters);
+  const isFiltering =
+    JSON.stringify(filters) !== JSON.stringify(debouncedFilters);
 
   // Fetch data with search, filters, pagination, and sorting
-  const { 
-    data, 
-    total, 
-    totalPages, 
-    isLoading, 
-    error, 
-    refetch, 
-    goToPage 
-  } = useBibliographyData(currentPage, itemsPerPage, sortBy, sortOrder, debouncedQuery, debouncedFilters);
+  const { data, total, totalPages, isLoading, error, refetch, goToPage } =
+    useBibliographyData(
+      currentPage,
+      itemsPerPage,
+      sortBy,
+      sortOrder,
+      debouncedQuery,
+      debouncedFilters
+    );
 
   // Process data for display
   const processedData = {
@@ -49,7 +60,7 @@ export default function BibliographyPage() {
 
   // Filter handlers
   const handleFilterChange = (key: string, value: string) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
+    setFilters((prev) => ({ ...prev, [key]: value }));
     setCurrentPage(1); // Reset to first page when filters change
   };
 
@@ -59,7 +70,8 @@ export default function BibliographyPage() {
     setCurrentPage(1);
   };
 
-  const hasActiveFilters = query.trim() || Object.values(filters).some(value => value.trim());
+  const hasActiveFilters =
+    query.trim() || Object.values(filters).some((value) => value.trim());
 
   // Sorting handler
   const handleSort = (field: string) => {
@@ -95,9 +107,21 @@ export default function BibliographyPage() {
       if (currentPage <= 3) {
         pages.push(1, 2, 3, 4, 5);
       } else if (currentPage >= totalPages - 2) {
-        pages.push(totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+        pages.push(
+          totalPages - 4,
+          totalPages - 3,
+          totalPages - 2,
+          totalPages - 1,
+          totalPages
+        );
       } else {
-        pages.push(currentPage - 2, currentPage - 1, currentPage, currentPage + 1, currentPage + 2);
+        pages.push(
+          currentPage - 2,
+          currentPage - 1,
+          currentPage,
+          currentPage + 1,
+          currentPage + 2
+        );
       }
     }
     return pages;
@@ -106,13 +130,33 @@ export default function BibliographyPage() {
   // Filter configuration
   const FILTER_FIELDS = [
     { key: "year", label: "Year", placeholder: "e.g., 2024 or 2020-2024" },
-    { key: "publication", label: "Publication", placeholder: "Journal or book title" },
+    {
+      key: "publication",
+      label: "Publication",
+      placeholder: "Journal or book title",
+    },
     { key: "publisher", label: "Publisher", placeholder: "Publisher name" },
-    { key: "language_published", label: "Language Published", placeholder: "e.g., English, Spanish" },
-    { key: "language_researched", label: "Language Researched", placeholder: "e.g., Mandarin, Arabic" },
-    { key: "country_of_research", label: "Country of Research", placeholder: "e.g., China, USA" },
+    {
+      key: "language_published",
+      label: "Language Published",
+      placeholder: "e.g., English, Spanish",
+    },
+    {
+      key: "language_researched",
+      label: "Language Researched",
+      placeholder: "e.g., Mandarin, Arabic",
+    },
+    {
+      key: "country_of_research",
+      label: "Country of Research",
+      placeholder: "e.g., China, USA",
+    },
     { key: "keywords", label: "Keywords", placeholder: "Research keywords" },
-    { key: "biblio_name", label: "Bibliography Name", placeholder: "Bibliography identifier" },
+    {
+      key: "biblio_name",
+      label: "Bibliography Name",
+      placeholder: "Bibliography identifier",
+    },
     { key: "source", label: "Source", placeholder: "Data source" },
   ];
 
@@ -130,9 +174,12 @@ export default function BibliographyPage() {
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Bibliography Entries</h1>
+            <h1 className="text-2xl font-bold text-gray-900">
+              Bibliography Entries
+            </h1>
             <p className="text-gray-600 mt-1">
-              {processedData.total} entries • Page {currentPage} of {processedData.totalPages}
+              {processedData.total} entries • Page {currentPage} of{" "}
+              {processedData.totalPages}
             </p>
           </div>
           <div className="flex gap-3">
@@ -189,7 +236,7 @@ export default function BibliographyPage() {
               </div>
             </div>
           </div>
-          
+
           <div className="flex gap-2">
             {["title", "author", "year", "created_at"].map((field) => (
               <button
@@ -201,9 +248,13 @@ export default function BibliographyPage() {
                     : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                 }`}
               >
-                {field === "created_at" ? "Date" : field.charAt(0).toUpperCase() + field.slice(1)}
+                {field === "created_at"
+                  ? "Date"
+                  : field.charAt(0).toUpperCase() + field.slice(1)}
                 {sortBy === field && (
-                  <span className="ml-1">{sortOrder === "asc" ? "↑" : "↓"}</span>
+                  <span className="ml-1">
+                    {sortOrder === "asc" ? "↑" : "↓"}
+                  </span>
                 )}
               </button>
             ))}
@@ -271,10 +322,9 @@ export default function BibliographyPage() {
               {hasActiveFilters ? "No results found" : "Start your search"}
             </h3>
             <p className="mt-1 text-sm text-gray-500">
-              {hasActiveFilters 
-                ? "Try adjusting your search terms or filters." 
-                : "Enter keywords above to find bibliography entries"
-              }
+              {hasActiveFilters
+                ? "Try adjusting your search terms or filters."
+                : "Enter keywords above to find bibliography entries"}
             </p>
           </div>
         ) : (
@@ -282,9 +332,12 @@ export default function BibliographyPage() {
             {/* Results Header */}
             <div className="flex justify-between items-center mb-6">
               <div>
-                <h2 className="text-lg font-medium text-gray-900">Search Results</h2>
+                <h2 className="text-lg font-medium text-gray-900">
+                  Search Results
+                </h2>
                 <p className="text-sm text-gray-500">
-                  {processedData.total} result{processedData.total !== 1 ? "s" : ""} found
+                  {processedData.total} result
+                  {processedData.total !== 1 ? "s" : ""} found
                 </p>
               </div>
             </div>
@@ -292,39 +345,12 @@ export default function BibliographyPage() {
             {/* Results List */}
             <div className="space-y-4">
               {processedData.items.map((item: Bibliography) => (
-                <div
+                <BibliographyCard
                   key={item._id}
-                  onClick={() => {
-                    window.location.href = `/bibliography/${item._id}`;
-                  }}
-                  className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 cursor-pointer transition-all duration-200 hover:shadow-md hover:border-indigo-300 flex items-start space-x-4"
-                >
-                  <div className="flex-shrink-0">
-                    <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center">
-                      <BookOpen className="w-6 h-6 text-indigo-600" />
-                    </div>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-lg font-medium text-gray-900 truncate">
-                      {item.title}
-                    </h3>
-                    <p className="text-sm text-gray-600 mt-1">by {item.author}</p>
-                    <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500">
-                      {item.year && (
-                        <div className="flex items-center">
-                          <Calendar className="w-4 h-4 mr-1" />
-                          {item.year}
-                        </div>
-                      )}
-                      {item.publication && (
-                        <div className="flex items-center">
-                          <BookOpen className="w-4 h-4 mr-1" />
-                          {item.publication}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                  item={item}
+                  variant="search-result"
+                  className="hover:shadow-md"
+                />
               ))}
             </div>
           </div>
@@ -338,7 +364,9 @@ export default function BibliographyPage() {
               <span className="text-sm text-gray-600">Show:</span>
               <select
                 value={itemsPerPage}
-                onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
+                onChange={(e) =>
+                  handleItemsPerPageChange(Number(e.target.value))
+                }
                 className="px-2 py-1 border border-gray-300 rounded-md text-sm"
               >
                 <option value={10}>10</option>
@@ -358,25 +386,26 @@ export default function BibliographyPage() {
               >
                 Previous
               </button>
-              
+
               <div className="flex items-center gap-1">
-                {generatePageNumbers(currentPage, processedData.totalPages).map((pageNum) => (
-                  pageNum && (
-                    <button
-                      key={pageNum}
-                      onClick={() => handlePageChange(pageNum)}
-                      className={`px-3 py-1 text-sm rounded-md ${
-                        pageNum === currentPage
-                          ? "bg-indigo-600 text-white"
-                          : "border border-gray-300 hover:bg-gray-50"
-                      }`}
-                    >
-                      {pageNum}
-                    </button>
-                  )
-                ))}
+                {generatePageNumbers(currentPage, processedData.totalPages).map(
+                  (pageNum) =>
+                    pageNum && (
+                      <button
+                        key={pageNum}
+                        onClick={() => handlePageChange(pageNum)}
+                        className={`px-3 py-1 text-sm rounded-md ${
+                          pageNum === currentPage
+                            ? "bg-indigo-600 text-white"
+                            : "border border-gray-300 hover:bg-gray-50"
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    )
+                )}
               </div>
-              
+
               <button
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage === processedData.totalPages}

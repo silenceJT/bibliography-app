@@ -14,15 +14,7 @@ interface DashboardData {
     count: number;
     percentage: number;
   }>;
-  recentItems: Array<{
-    _id: string;
-    title: string;
-    author: string;
-    year: string;
-    publication: string;
-    language_published: string;
-    created_at?: Date;
-  }>;
+  recentItems: Bibliography[]; // BRUTAL: Use full Bibliography objects for consistent card display
 }
 
 // Simplified cache class - only what we actually need
