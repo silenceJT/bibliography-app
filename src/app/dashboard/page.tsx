@@ -1,12 +1,14 @@
 "use client";
 
-import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import DashboardLayout from "@/components/layout/dashboard-layout";
 import { ResearchInsights } from "@/components/dashboard/research-insights";
 import { LanguageDistribution } from "@/components/dashboard/language-distribution";
 import { RecentBibliographies } from "@/components/dashboard/recent-bibliographies";
 import { useDashboardData } from "@/hooks/use-simple-cache";
 import { SmartLoading } from "@/components/ui/smart-loading";
 import { DashboardSkeleton } from "@/components/ui/dashboard-skeleton";
+import { usePermissions } from "@/hooks/use-permissions";
+import { RoleDisplay } from "@/components/ui/role-display";
 import {
   Search,
   Plus,
@@ -19,6 +21,7 @@ import Link from "next/link";
 
 export default function DashboardPage() {
   const { data, isLoading, error, refetch, loadingStage } = useDashboardData();
+  const { can, userRole } = usePermissions();
 
   return (
     <DashboardLayout>
@@ -33,7 +36,7 @@ export default function DashboardPage() {
         emptyIcon={<BookOpen className="h-8 w-8 text-gray-400" />}
         className="space-y-6"
       >
-        {/* Simple Header */}
+        {/* Header with Role Info */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">
@@ -43,6 +46,7 @@ export default function DashboardPage() {
               Overview of your bibliography database
             </p>
             <div className="flex items-center gap-2 mt-2">
+              <RoleDisplay role={userRole} />
               <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
                 Reports feature in development
               </span>
@@ -60,15 +64,18 @@ export default function DashboardPage() {
           </button>
         </div>
 
-        {/* Quick Actions */}
+        {/* Quick Actions - Role-based */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Link
-            href="/bibliography/new"
-            className="p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
-          >
-            <Plus className="h-6 w-6 text-blue-600 mb-2" />
-            <div className="font-medium text-blue-900">Add Entry</div>
-          </Link>
+          {can.create && (
+            <Link
+              href="/bibliography/new"
+              className="p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+            >
+              <Plus className="h-6 w-6 text-blue-600 mb-2" />
+              <div className="font-medium text-blue-900">Add Entry</div>
+            </Link>
+          )}
+
           <Link
             href="/bibliography"
             className="p-4 bg-green-50 rounded-lg hover:bg-green-100 transition-colors"
@@ -86,13 +93,16 @@ export default function DashboardPage() {
             <div className="font-medium text-gray-500">Reports</div>
             <div className="text-xs text-gray-400 mt-1">Coming Soon</div>
           </div>
-          <Link
-            href="/dashboard/users"
-            className="p-4 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors"
-          >
-            <Users className="h-6 w-6 text-orange-600 mb-2" />
-            <div className="font-medium text-orange-900">Users</div>
-          </Link>
+
+          {can.manageUsers && (
+            <Link
+              href="/admin/users"
+              className="p-4 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors"
+            >
+              <Users className="h-6 w-6 text-orange-600 mb-2" />
+              <div className="font-medium text-orange-900">User Management</div>
+            </Link>
+          )}
         </div>
 
         {/* Charts Row */}

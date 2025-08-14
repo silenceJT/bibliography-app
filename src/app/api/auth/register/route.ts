@@ -20,15 +20,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create user
+    // Create user with default "standard" role
     const user = await UserService.createUser({
       name,
       email,
       password,
-      role: "user", // Default role
-      created_at: new Date(),
-      updated_at: new Date(),
+      preferences: {
+        language: "en",
+        timezone: "UTC",
+        notifications: {
+          email: true,
+          browser: false,
+        },
+      },
+      statistics: {
+        totalBibliographies: 0,
+        lastLogin: new Date(),
+        createdAt: new Date(),
+      },
       is_active: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     });
 
     // Remove password from response

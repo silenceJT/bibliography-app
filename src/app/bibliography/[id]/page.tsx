@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { use } from "react";
-import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import DashboardLayout from "@/components/layout/dashboard-layout";
+import { usePermissions } from "@/hooks/use-permissions";
 import {
   ArrowLeft,
   Edit,
@@ -31,6 +32,7 @@ export default function BibliographyDetailPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
+  const { can } = usePermissions();
   const [bibliography, setBibliography] = useState<Bibliography | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -188,32 +190,39 @@ export default function BibliographyDetailPage({
             </div>
           </div>
 
-          <div className="flex gap-3">
-            <Link
-              href={`/bibliography/${id}/edit`}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2"
-            >
-              <Edit className="h-4 w-4" />
-              Edit
-            </Link>
-            <button
-              onClick={handleDelete}
-              disabled={isDeleting}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-            >
-              {isDeleting ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-                  Deleting...
-                </>
-              ) : (
-                <>
-                  <Trash2 className="h-4 w-4" />
-                  Delete
-                </>
+          {/* Only show edit/delete buttons if user has permissions */}
+          {(can.update || can.delete) && (
+            <div className="flex gap-3">
+              {can.update && (
+                <Link
+                  href={`/bibliography/${id}/edit`}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2"
+                >
+                  <Edit className="h-4 w-4" />
+                  Edit
+                </Link>
               )}
-            </button>
-          </div>
+              {can.delete && (
+                <button
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                >
+                  {isDeleting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="h-4 w-4" />
+                      Delete
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* BRUTAL: Main content with visual hierarchy */}
@@ -481,19 +490,21 @@ export default function BibliographyDetailPage({
           </div>
         </div>
 
-        {/* BRUTAL: Quick actions */}
+        {/* BRUTAL: Quick actions - Only show if user has permissions */}
         <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
             Quick Actions
           </h3>
           <div className="flex flex-wrap gap-3">
-            <Link
-              href="/bibliography/new"
-              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              Add Another Entry
-            </Link>
+            {can.create && (
+              <Link
+                href="/bibliography/new"
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Add Another Entry
+              </Link>
+            )}
             <Link
               href="/bibliography"
               className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center gap-2"

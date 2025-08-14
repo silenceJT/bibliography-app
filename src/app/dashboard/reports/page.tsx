@@ -1,6 +1,6 @@
 "use client";
 
-import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import DashboardLayout from "@/components/layout/dashboard-layout";
 import { Filter, RefreshCw } from "lucide-react";
 import { ResearchInsights } from "@/components/reports/research-insights";
 import {

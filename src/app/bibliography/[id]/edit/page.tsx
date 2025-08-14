@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { use } from "react";
-import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import DashboardLayout from "@/components/layout/dashboard-layout";
+import { PermissionGuard } from "@/components/ui/permission-guard";
 import BibliographyForm from "@/components/forms/bibliography-form";
 import { Bibliography } from "@/types/bibliography";
 
@@ -61,12 +62,14 @@ export default function EditBibliographyPage({
   }
 
   return (
-    <DashboardLayout>
-      <BibliographyForm
-        mode="edit"
-        initialData={bibliography}
-        bibliographyId={id}
-      />
-    </DashboardLayout>
+    <PermissionGuard requiredPermission="update">
+      <DashboardLayout>
+        <BibliographyForm
+          mode="edit"
+          initialData={bibliography}
+          bibliographyId={id}
+        />
+      </DashboardLayout>
+    </PermissionGuard>
   );
 }

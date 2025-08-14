@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import DashboardLayout from "@/components/layout/dashboard-layout";
 import { SmartLoading } from "@/components/ui/smart-loading";
 import { useBibliographyData } from "@/hooks/use-simple-cache";
 import { Bibliography } from "@/types/bibliography";
 import { useDebounce } from "@/hooks/use-debounce";
+import { usePermissions } from "@/hooks/use-permissions";
 import {
   Filter,
   X,
@@ -20,6 +21,8 @@ import Link from "next/link";
 import { BibliographyCard } from "@/components/ui/bibliography-card";
 
 export default function BibliographyPage() {
+  const { can } = usePermissions();
+
   // Search and filter state
   const [query, setQuery] = useState("");
   const [showFilters, setShowFilters] = useState(false);
@@ -191,13 +194,15 @@ export default function BibliographyPage() {
             >
               Export
             </button>
-            <Link
-              href="/bibliography/new"
-              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-            >
-              <Plus className="h-4 w-4 inline mr-2" />
-              Add Entry
-            </Link>
+            {can.create && (
+              <Link
+                href="/bibliography/new"
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+              >
+                <Plus className="h-4 w-4 inline mr-2" />
+                Add Entry
+              </Link>
+            )}
           </div>
         </div>
 
@@ -423,16 +428,18 @@ export default function BibliographyPage() {
         )}
       </SmartLoading>
 
-      {/* BRUTAL: Floating Action Button - moved higher to avoid covering pagination */}
-      <div className="fixed bottom-20 right-6 z-50">
-        <Link
-          href="/bibliography/new"
-          className="flex items-center justify-center w-16 h-16 bg-indigo-600 text-white rounded-full shadow-lg hover:bg-indigo-700 hover:shadow-xl transition-all duration-200 transform hover:scale-110"
-          title="Add New Entry"
-        >
-          <Plus className="h-8 w-8" />
-        </Link>
-      </div>
+      {/* Floating Action Button - Only show if user can create */}
+      {can.create && (
+        <div className="fixed bottom-20 right-6 z-50">
+          <Link
+            href="/bibliography/new"
+            className="flex items-center justify-center w-16 h-16 bg-indigo-600 text-white rounded-full shadow-lg hover:bg-indigo-700 hover:shadow-xl transition-all duration-200 transform hover:scale-110"
+            title="Add New Entry"
+          >
+            <Plus className="h-8 w-8" />
+          </Link>
+        </div>
+      )}
     </DashboardLayout>
   );
 }

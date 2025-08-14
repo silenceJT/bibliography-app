@@ -1,13 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import DashboardLayout from "@/components/layout/dashboard-layout";
 import { User, Shield, Bell, Database } from "lucide-react";
-
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("profile");
-
 
   const tabs = [
     { id: "profile", name: "Profile", icon: User },
