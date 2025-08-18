@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { use } from "react";
-import DashboardLayout from "@/components/layout/dashboard-layout";
+import ContentLayout from "@/components/layout/content-layout";
 import { usePermissions } from "@/hooks/use-permissions";
 import {
   ArrowLeft,
@@ -133,20 +133,20 @@ export default function BibliographyDetailPage({
 
   if (isLoading) {
     return (
-      <DashboardLayout>
+      <ContentLayout>
         <div className="min-h-[400px] flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-indigo-600 mx-auto mb-4"></div>
             <p className="text-gray-600">Loading bibliography entry...</p>
           </div>
         </div>
-      </DashboardLayout>
+      </ContentLayout>
     );
   }
 
   if (error || !bibliography) {
     return (
-      <DashboardLayout>
+      <ContentLayout>
         <div className="min-h-[400px] flex items-center justify-center">
           <div className="text-center">
             <h2 className="text-xl font-semibold text-gray-900 mb-2">
@@ -164,12 +164,12 @@ export default function BibliographyDetailPage({
             </Link>
           </div>
         </div>
-      </DashboardLayout>
+      </ContentLayout>
     );
   }
 
   return (
-    <DashboardLayout>
+    <ContentLayout>
       <div className="max-w-6xl mx-auto space-y-6">
         {/* BRUTAL: Clear navigation and actions */}
         <div className="flex items-center justify-between">
@@ -522,6 +522,6 @@ export default function BibliographyDetailPage({
           </div>
         </div>
       </div>
-    </DashboardLayout>
+    </ContentLayout>
   );
 }

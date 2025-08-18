@@ -1,15 +1,15 @@
 "use client";
 
-import DashboardLayout from "@/components/layout/dashboard-layout";
+import ContentLayout from "@/components/layout/content-layout";
 import { PermissionGuard } from "@/components/ui/permission-guard";
 import BibliographyForm from "@/components/forms/bibliography-form";
 
 export default function AddBibliographyPage() {
   return (
     <PermissionGuard requiredPermission="create">
-      <DashboardLayout>
+      <ContentLayout>
         <BibliographyForm mode="create" />
-      </DashboardLayout>
+      </ContentLayout>
     </PermissionGuard>
   );
 }

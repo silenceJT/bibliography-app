@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import DashboardLayout from "@/components/layout/dashboard-layout";
+import ContentLayout from "@/components/layout/content-layout";
 import { SmartLoading } from "@/components/ui/smart-loading";
 import { useBibliographyData } from "@/hooks/use-simple-cache";
 import { Bibliography } from "@/types/bibliography";
@@ -164,7 +164,7 @@ export default function BibliographyPage() {
   ];
 
   return (
-    <DashboardLayout>
+    <ContentLayout>
       <SmartLoading
         isLoading={isLoading}
         error={error}
@@ -440,6 +440,6 @@ export default function BibliographyPage() {
           </Link>
         </div>
       )}
-    </DashboardLayout>
+    </ContentLayout>
   );
 }

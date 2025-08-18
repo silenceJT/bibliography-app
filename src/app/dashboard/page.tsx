@@ -1,6 +1,6 @@
 "use client";
 
-import DashboardLayout from "@/components/layout/dashboard-layout";
+import ContentLayout from "@/components/layout/content-layout";
 import { ResearchInsights } from "@/components/dashboard/research-insights";
 import { LanguageDistribution } from "@/components/dashboard/language-distribution";
 import { RecentBibliographies } from "@/components/dashboard/recent-bibliographies";
@@ -24,7 +24,7 @@ export default function DashboardPage() {
   const { can, userRole } = usePermissions();
 
   return (
-    <DashboardLayout>
+    <ContentLayout>
       <SmartLoading
         isLoading={isLoading}
         error={error}
@@ -127,6 +127,6 @@ export default function DashboardPage() {
           </div>
         </div>
       </SmartLoading>
-    </DashboardLayout>
+    </ContentLayout>
   );
 }

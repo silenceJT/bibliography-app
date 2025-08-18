@@ -1,6 +1,6 @@
 "use client";
 
-import DashboardLayout from "@/components/layout/dashboard-layout";
+import ContentLayout from "@/components/layout/content-layout";
 import { Filter, RefreshCw } from "lucide-react";
 import { ResearchInsights } from "@/components/reports/research-insights";
 import {
@@ -401,7 +401,7 @@ export default function ReportsPage() {
   };
 
   return (
-    <DashboardLayout>
+    <ContentLayout>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -544,6 +544,6 @@ export default function ReportsPage() {
           </div>
         )}
       </div>
-    </DashboardLayout>
+    </ContentLayout>
   );
 }

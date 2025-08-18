@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { use } from "react";
-import DashboardLayout from "@/components/layout/dashboard-layout";
+import ContentLayout from "@/components/layout/content-layout";
 import { PermissionGuard } from "@/components/ui/permission-guard";
 import BibliographyForm from "@/components/forms/bibliography-form";
 import { Bibliography } from "@/types/bibliography";
@@ -38,17 +38,17 @@ export default function EditBibliographyPage({
 
   if (loading) {
     return (
-      <DashboardLayout>
+      <ContentLayout>
         <div className="flex items-center justify-center min-h-screen">
           <div className="animate-spin rounded-full h-8 w-8 border-2 border-indigo-600 border-t-transparent"></div>
         </div>
-      </DashboardLayout>
+      </ContentLayout>
     );
   }
 
   if (!bibliography) {
     return (
-      <DashboardLayout>
+      <ContentLayout>
         <div className="text-center py-12">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">
             Bibliography Not Found
@@ -57,19 +57,19 @@ export default function EditBibliographyPage({
             The bibliography you&apos;re looking for doesn&apos;t exist.
           </p>
         </div>
-      </DashboardLayout>
+      </ContentLayout>
     );
   }
 
   return (
     <PermissionGuard requiredPermission="update">
-      <DashboardLayout>
+      <ContentLayout>
         <BibliographyForm
           mode="edit"
           initialData={bibliography}
           bibliographyId={id}
         />
-      </DashboardLayout>
+      </ContentLayout>
     </PermissionGuard>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import DashboardLayout from "@/components/layout/dashboard-layout";
+import ContentLayout from "@/components/layout/content-layout";
 import { User, Shield, Bell, Database } from "lucide-react";
 
 export default function SettingsPage() {
@@ -15,7 +15,7 @@ export default function SettingsPage() {
   ];
 
   return (
-    <DashboardLayout>
+    <ContentLayout>
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
@@ -238,6 +238,6 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
-    </DashboardLayout>
+    </ContentLayout>
   );
 }

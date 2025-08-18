@@ -2,7 +2,7 @@
 
 import { ReactNode } from "react";
 import { usePermissions } from "@/hooks/use-permissions";
-import DashboardLayout from "@/components/layout/dashboard-layout";
+import ContentLayout from "@/components/layout/content-layout";
 
 interface PermissionGuardProps {
   children: ReactNode;
@@ -26,7 +26,7 @@ export function PermissionGuard({
 
     if (showAccessDenied) {
       return (
-        <DashboardLayout>
+        <ContentLayout>
           <div className="text-center py-12">
             <h1 className="text-2xl font-bold text-gray-900 mb-4">
               Access Denied
@@ -35,7 +35,7 @@ export function PermissionGuard({
               You don&apos;t have permission to access this feature.
             </p>
           </div>
-        </DashboardLayout>
+        </ContentLayout>
       );
     }
 

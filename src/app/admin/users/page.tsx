@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import DashboardLayout from "@/components/layout/dashboard-layout";
+import ContentLayout from "@/components/layout/content-layout";
 import { usePermissions } from "@/hooks/use-permissions";
 import { PermissionGuard } from "@/components/ui/permission-guard";
 import { RoleDisplay } from "@/components/ui/role-display";
@@ -104,7 +104,7 @@ export default function UserManagementPage() {
 
   return (
     <PermissionGuard requiredPermission="manageUsers">
-      <DashboardLayout>
+      <ContentLayout>
         <div className="space-y-6">
           {/* Header */}
           <div className="flex justify-between items-center">
@@ -365,7 +365,7 @@ export default function UserManagementPage() {
             </div>
           )}
         </div>
-      </DashboardLayout>
+      </ContentLayout>
     </PermissionGuard>
   );
 }

@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import SessionProvider from "@/components/providers/SessionProvider";
+import PersistentSidebar from "@/components/layout/persistent-sidebar";
+import { SidebarProvider } from "@/contexts/sidebar-context";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -19,7 +21,12 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className} suppressHydrationWarning={true}>
         <SessionProvider>
-          <div className="min-h-screen bg-background">{children}</div>
+          <SidebarProvider>
+            <div className="min-h-screen bg-background">
+              <PersistentSidebar />
+              {children}
+            </div>
+          </SidebarProvider>
         </SessionProvider>
       </body>
     </html>
