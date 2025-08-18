@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Bibliography } from "@/types/bibliography";
+import { Bibliography } from "../types/bibliography";
 
 // Dashboard data structure based on actual API response
 interface DashboardData {
@@ -16,6 +16,32 @@ interface DashboardData {
   }>;
   recentItems: Bibliography[]; // BRUTAL: Use full Bibliography objects for consistent card display
 }
+
+// Bibliography response structure
+interface BibliographyResponse {
+  data: Bibliography[];
+  total: number;
+  page: number;
+  totalPages: number;
+}
+
+// Parameter-based cache key generator
+const generateCacheKey = (
+  page: number,
+  limit: number,
+  sortBy: string,
+  sortOrder: string,
+  query: string,
+  filters: Record<string, string>
+): string => {
+  const filterString = Object.entries(filters)
+    .filter(([_, value]) => value && value.trim())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, value]) => `${key}:${value}`)
+    .join("|");
+
+  return `bibliography:${page}:${limit}:${sortBy}:${sortOrder}:${query}:${filterString}`;
+};
 
 // Simplified cache class - only what we actually need
 class SimpleCache<T> {
@@ -58,9 +84,40 @@ class SimpleCache<T> {
   }
 }
 
+// Parameter-based cache for bibliography data
+class ParameterizedCache<T> {
+  private cache = new Map<string, SimpleCache<T>>();
+  private readonly ttl: number;
+
+  constructor(ttlMinutes: number = 5) {
+    this.ttl = ttlMinutes * 60 * 1000;
+  }
+
+  getCache(key: string): SimpleCache<T> {
+    if (!this.cache.has(key)) {
+      this.cache.set(key, new SimpleCache<T>(this.ttl / (60 * 1000)));
+    }
+    return this.cache.get(key)!;
+  }
+
+  invalidateAll(): void {
+    this.cache.clear();
+  }
+
+  invalidateByPattern(pattern: string): void {
+    const keysToDelete: string[] = [];
+    this.cache.forEach((_, key) => {
+      if (key.includes(pattern)) {
+        keysToDelete.push(key);
+      }
+    });
+    keysToDelete.forEach((key) => this.cache.delete(key));
+  }
+}
+
 // Cache instances
 const dashboardCache = new SimpleCache<DashboardData>(5);
-const bibliographyCache = new SimpleCache<Bibliography[]>(5);
+const bibliographyCache = new ParameterizedCache<BibliographyResponse>(5);
 
 // Common error handling
 const createErrorMessage = (error: unknown): string => {
@@ -87,12 +144,7 @@ const loadBibliographyData = async (
   sortOrder: "asc" | "desc" = "desc",
   query: string = "",
   filters: Record<string, string> = {}
-): Promise<{
-  data: Bibliography[];
-  total: number;
-  page: number;
-  totalPages: number;
-}> => {
+): Promise<BibliographyResponse> => {
   const params = new URLSearchParams({
     page: page.toString(),
     limit: limit.toString(),
@@ -114,53 +166,6 @@ const loadBibliographyData = async (
 
   return fetchWithErrorHandling(`/api/bibliography?${params}`);
 };
-
-// Generic hook factory to reduce duplication
-function createDataHook<T>(
-  cache: SimpleCache<T>,
-  loadFn: () => Promise<T>,
-  initialData?: T
-) {
-  return () => {
-    const [data, setData] = useState<T | null>(
-      cache.getData() || initialData || null
-    );
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(cache.getError());
-    const hasInitialized = useRef(false);
-
-    const refetch = useCallback(async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-
-        cache.invalidate();
-        const newData = await loadFn();
-
-        cache.updateData(newData);
-        setData(newData);
-      } catch (err) {
-        const errorMessage = createErrorMessage(err);
-        setError(errorMessage);
-        cache.setError(errorMessage);
-      } finally {
-        setIsLoading(false);
-      }
-    }, []);
-
-    // Initial load - only once on mount
-    useEffect(() => {
-      if (hasInitialized.current) return;
-      hasInitialized.current = true;
-
-      if (!cache.getData() || cache.isStale()) {
-        refetch();
-      }
-    }, [refetch]);
-
-    return { data, isLoading, error, refetch };
-  };
-}
 
 // Dashboard hook with progressive loading and optimistic updates
 export function useDashboardData() {
@@ -235,16 +240,28 @@ export const useBibliographyData = (
   query: string = "",
   filters: Record<string, string> = {}
 ) => {
+  // Generate cache key based on parameters
+  const cacheKey = generateCacheKey(
+    page,
+    limit,
+    sortBy,
+    sortOrder,
+    query,
+    filters
+  );
+  const cache = bibliographyCache.getCache(cacheKey);
+
   const [data, setData] = useState<Bibliography[] | null>(
-    bibliographyCache.getData()
+    cache.getData()?.data || null
   );
-  const [total, setTotal] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(cache.getData()?.total || 0);
+  const [totalPages, setTotalPages] = useState(
+    cache.getData()?.totalPages || 1
+  );
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(
-    bibliographyCache.getError()
-  );
+  const [error, setError] = useState<string | null>(cache.getError());
   const hasInitialized = useRef(false);
+  const lastCacheKey = useRef(cacheKey);
 
   const refetch = useCallback(async () => {
     try {
@@ -264,32 +281,41 @@ export const useBibliographyData = (
       setTotal(result.total);
       setTotalPages(result.totalPages);
 
-      bibliographyCache.updateData(result.data);
+      // Update the correct cache instance
+      const currentCache = bibliographyCache.getCache(cacheKey);
+      currentCache.updateData(result);
     } catch (err) {
       const errorMessage = createErrorMessage(err);
       setError(errorMessage);
-      bibliographyCache.setError(errorMessage);
+      const currentCache = bibliographyCache.getCache(cacheKey);
+      currentCache.setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
-  }, [page, limit, sortBy, sortOrder, query, filters]);
+  }, [page, limit, sortBy, sortOrder, query, filters, cacheKey]);
 
-  // Initial load and when parameters change
+  // Single useEffect to handle both initial load and parameter changes
   useEffect(() => {
-    if (hasInitialized.current) return;
-    hasInitialized.current = true;
+    const currentCache = bibliographyCache.getCache(cacheKey);
 
-    if (!bibliographyCache.getData() || bibliographyCache.isStale()) {
-      refetch();
-    }
-  }, [refetch]);
+    // Check if we need to fetch data
+    const needsFetch = !currentCache.getData() || currentCache.isStale();
 
-  // Refetch when parameters change
-  useEffect(() => {
-    if (hasInitialized.current) {
+    if (needsFetch) {
       refetch();
+    } else {
+      // Update state with cached data
+      const cachedData = currentCache.getData();
+      if (cachedData) {
+        setData(cachedData.data);
+        setTotal(cachedData.total);
+        setTotalPages(cachedData.totalPages);
+      }
+      setError(currentCache.getError());
     }
-  }, [refetch]);
+
+    lastCacheKey.current = cacheKey;
+  }, [cacheKey, refetch]);
 
   const goToPage = useCallback((newPage: number) => {
     // This will trigger a refetch with the new page
