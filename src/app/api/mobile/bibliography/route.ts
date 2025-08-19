@@ -13,10 +13,7 @@ export async function GET(request: NextRequest) {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "Not authenticated",
-        },
+        createMobileResponse(false, undefined, "Not authenticated"),
         { status: 401 }
       );
     }
@@ -46,7 +43,7 @@ export async function GET(request: NextRequest) {
     const collection = db.collection("biblio_200419");
 
     // Build comprehensive search query
-    let query: any = {};
+    const query: Record<string, any> = {};
 
     // Text search across multiple fields
     if (search) {
@@ -153,6 +150,70 @@ export async function GET(request: NextRequest) {
     );
   } catch (error) {
     console.error("Mobile bibliography error:", error);
+    return NextResponse.json(
+      createMobileResponse(false, undefined, "Internal server error"),
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    // Check authentication
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        createMobileResponse(false, undefined, "Not authenticated"),
+        { status: 401 }
+      );
+    }
+
+    const body = await request.json();
+
+    // Basic validation
+    if (!body.title || !body.author) {
+      return NextResponse.json(
+        createMobileResponse(false, undefined, "Title and author are required"),
+        { status: 400 }
+      );
+    }
+
+    // Connect to MongoDB
+    const client = await clientPromise;
+    const db = client.db("test");
+    const collection = db.collection("biblio_200419");
+
+    // Add metadata
+    const bibliographyData = {
+      ...body,
+      created_at: new Date(),
+      updated_at: new Date(),
+      created_by: session.user.id,
+    };
+
+    // Insert the bibliography
+    const result = await collection.insertOne(bibliographyData);
+
+    if (!result.acknowledged) {
+      return NextResponse.json(
+        createMobileResponse(false, undefined, "Failed to create bibliography"),
+        { status: 500 }
+      );
+    }
+
+    // Fetch the created bibliography
+    const createdBibliography = await collection.findOne({
+      _id: result.insertedId,
+    });
+    const formattedBibliography =
+      formatBibliographyForMobile(createdBibliography);
+
+    return NextResponse.json(
+      createMobileResponse(true, formattedBibliography, undefined),
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error("Error creating bibliography:", error);
     return NextResponse.json(
       createMobileResponse(false, undefined, "Internal server error"),
       { status: 500 }
