@@ -1,19 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
 import clientPromise from "@/lib/mongodb";
 import {
   formatBibliographyForMobile,
   createMobileResponse,
 } from "@/lib/mobile-utils";
+import { authenticateMobileRequest } from "@/lib/mobile-auth";
 
 export async function GET(request: NextRequest) {
   try {
-    // Check authentication
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    // Check authentication using mobile auth utility
+    const authResult = await authenticateMobileRequest(request);
+    if (!authResult.isAuthenticated) {
       return NextResponse.json(
-        createMobileResponse(false, undefined, "Not authenticated"),
+        createMobileResponse(
+          false,
+          undefined,
+          authResult.error || "Not authenticated"
+        ),
         { status: 401 }
       );
     }
@@ -27,6 +30,8 @@ export async function GET(request: NextRequest) {
 
     // Advanced search parameters
     const year = searchParams.get("year");
+    const yearFrom = searchParams.get("yearFrom");
+    const yearTo = searchParams.get("yearTo");
     const languagePublished = searchParams.get("language_published");
     const languageResearched = searchParams.get("language_researched");
     const countryOfResearch = searchParams.get("country_of_research");
@@ -45,6 +50,23 @@ export async function GET(request: NextRequest) {
     // Build comprehensive search query
     const query: Record<string, any> = {};
 
+    // CRITICAL: Filter out soft-deleted items by default
+    // Only show active items (not deleted)
+    query.$and = [
+      {
+        $or: [
+          { is_active: { $ne: false } }, // is_active is not false
+          { is_active: { $exists: false } }, // is_active field doesn't exist (legacy items)
+        ],
+      },
+      {
+        $or: [
+          { deleted_at: { $exists: false } }, // deleted_at field doesn't exist
+          { deleted_at: null }, // deleted_at is null
+        ],
+      },
+    ];
+
     // Text search across multiple fields
     if (search) {
       query.$or = [
@@ -58,7 +80,32 @@ export async function GET(request: NextRequest) {
 
     // Add specific field filters
     if (year) {
-      query.year = year;
+      // Convert year to integer for exact match
+      const yearInt = parseInt(year);
+      if (!isNaN(yearInt)) {
+        query.year = yearInt;
+      }
+    } else if (yearFrom || yearTo) {
+      // Handle year range queries
+      const yearRange: Record<string, number> = {};
+
+      if (yearFrom) {
+        const yearFromInt = parseInt(yearFrom);
+        if (!isNaN(yearFromInt)) {
+          yearRange.$gte = yearFromInt;
+        }
+      }
+
+      if (yearTo) {
+        const yearToInt = parseInt(yearTo);
+        if (!isNaN(yearToInt)) {
+          yearRange.$lte = yearToInt;
+        }
+      }
+
+      if (Object.keys(yearRange).length > 0) {
+        query.year = yearRange;
+      }
     }
 
     if (languagePublished) {
@@ -121,6 +168,8 @@ export async function GET(request: NextRequest) {
       query: search || null,
       filters: {
         year: year || null,
+        yearFrom: yearFrom || null,
+        yearTo: yearTo || null,
         languagePublished: languagePublished || null,
         languageResearched: languageResearched || null,
         countryOfResearch: countryOfResearch || null,
@@ -159,11 +208,15 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    // Check authentication
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    // Check authentication using mobile auth utility
+    const authResult = await authenticateMobileRequest(request);
+    if (!authResult.isAuthenticated) {
       return NextResponse.json(
-        createMobileResponse(false, undefined, "Not authenticated"),
+        createMobileResponse(
+          false,
+          undefined,
+          authResult.error || "Not authenticated"
+        ),
         { status: 401 }
       );
     }
@@ -178,6 +231,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Convert year to integer if provided
+    if (body.year && typeof body.year === "string") {
+      const yearInt = parseInt(body.year);
+      if (!isNaN(yearInt)) {
+        body.year = yearInt;
+      } else {
+        return NextResponse.json(
+          createMobileResponse(false, undefined, "Year must be a valid number"),
+          { status: 400 }
+        );
+      }
+    }
+
     // Connect to MongoDB
     const client = await clientPromise;
     const db = client.db("test");
@@ -188,7 +254,7 @@ export async function POST(request: NextRequest) {
       ...body,
       created_at: new Date(),
       updated_at: new Date(),
-      created_by: session.user.id,
+      created_by: authResult.userId,
     };
 
     // Insert the bibliography

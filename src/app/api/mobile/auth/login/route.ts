@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+import { authOptions } from "@/lib/auth";
 import { compare } from "bcryptjs";
 import clientPromise from "@/lib/mongodb";
-import { UserService } from "@/lib/user";
 
 export async function POST(request: NextRequest) {
   try {
     const { email, password } = await request.json();
+
+    console.log("Mobile login attempt for email:", email);
 
     // Validate input
     if (!email || !password) {
@@ -26,6 +28,15 @@ export async function POST(request: NextRequest) {
     const user = await usersCollection.findOne({
       email: email.toLowerCase(),
     });
+
+    console.log(
+      "User found:",
+      user ? "Yes" : "No",
+      "User data:",
+      user
+        ? { _id: user._id, email: user.email, name: user.name, role: user.role }
+        : "None"
+    );
 
     if (!user) {
       return NextResponse.json(
@@ -49,22 +60,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get additional user data
-    const dbUser = await UserService.getUserByEmail(user.email);
-
-    // Return clean JSON for mobile
-    return NextResponse.json({
+    // Return clean JSON for mobile with token
+    const responseData = {
       success: true,
       user: {
-        id: user._id.toString(),
+        _id: user._id.toString(),
         email: user.email,
         name: user.name,
         role: user.role,
-        preferences: dbUser?.preferences,
-        statistics: dbUser?.statistics,
+        preferences: user.preferences || {},
+        statistics: user.statistics || {},
       },
+      token: user._id.toString(), // Simple token for mobile (you might want to use JWT here)
       message: "Login successful",
-    });
+    };
+
+    console.log("Sending response:", JSON.stringify(responseData, null, 2));
+
+    return NextResponse.json(responseData);
   } catch (error) {
     console.error("Mobile login error:", error);
     return NextResponse.json(

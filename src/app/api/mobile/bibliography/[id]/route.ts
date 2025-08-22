@@ -1,43 +1,63 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
 import clientPromise from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
 import {
   formatBibliographyForMobile,
   createMobileResponse,
 } from "@/lib/mobile-utils";
+import { authenticateMobileRequest } from "@/lib/mobile-auth";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Check authentication
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    // Check authentication using mobile auth utility
+    const authResult = await authenticateMobileRequest(request);
+    if (!authResult.isAuthenticated) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "Not authenticated",
-        },
+        createMobileResponse(
+          false,
+          undefined,
+          authResult.error || "Not authenticated"
+        ),
         { status: 401 }
       );
     }
 
-    const { id } = params;
+    const { id } = await params;
 
     // Connect to MongoDB
     const client = await clientPromise;
     const db = client.db("test");
     const collection = db.collection("biblio_200419");
 
-    // Find bibliography by ID
-    const rawBibliography = await collection.findOne({ _id: new ObjectId(id) });
+    // Find bibliography by ID and ensure it's not deleted
+    const rawBibliography = await collection.findOne({
+      _id: new ObjectId(id),
+      $and: [
+        {
+          $or: [
+            { is_active: { $ne: false } }, // is_active is not false
+            { is_active: { $exists: false } }, // is_active field doesn't exist (legacy items)
+          ],
+        },
+        {
+          $or: [
+            { deleted_at: { $exists: false } }, // deleted_at field doesn't exist
+            { deleted_at: null }, // deleted_at is null
+          ],
+        },
+      ],
+    });
 
     if (!rawBibliography) {
       return NextResponse.json(
-        createMobileResponse(false, undefined, "Bibliography not found"),
+        createMobileResponse(
+          false,
+          undefined,
+          "Bibliography not found or has been deleted"
+        ),
         { status: 404 }
       );
     }
@@ -57,19 +77,23 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Check authentication
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    // Check authentication using mobile auth utility
+    const authResult = await authenticateMobileRequest(request);
+    if (!authResult.isAuthenticated) {
       return NextResponse.json(
-        createMobileResponse(false, undefined, "Not authenticated"),
+        createMobileResponse(
+          false,
+          undefined,
+          authResult.error || "Not authenticated"
+        ),
         { status: 401 }
       );
     }
 
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
 
     // Basic validation
@@ -80,16 +104,49 @@ export async function PUT(
       );
     }
 
+    // Convert year to integer if provided
+    if (body.year && typeof body.year === "string") {
+      const yearInt = parseInt(body.year);
+      if (!isNaN(yearInt)) {
+        body.year = yearInt;
+      } else {
+        return NextResponse.json(
+          createMobileResponse(false, undefined, "Year must be a valid number"),
+          { status: 400 }
+        );
+      }
+    }
+
     // Connect to MongoDB
     const client = await clientPromise;
     const db = client.db("test");
     const collection = db.collection("biblio_200419");
 
-    // Check if bibliography exists
-    const existingBibliography = await collection.findOne({ _id: id });
+    // Check if bibliography exists and is not deleted
+    const existingBibliography = await collection.findOne({
+      _id: new ObjectId(id),
+      $and: [
+        {
+          $or: [
+            { is_active: { $ne: false } }, // is_active is not false
+            { is_active: { $exists: false } }, // is_active field doesn't exist (legacy items)
+          ],
+        },
+        {
+          $or: [
+            { deleted_at: { $exists: false } }, // deleted_at field doesn't exist
+            { deleted_at: null }, // deleted_at is null
+          ],
+        },
+      ],
+    });
     if (!existingBibliography) {
       return NextResponse.json(
-        createMobileResponse(false, undefined, "Bibliography not found"),
+        createMobileResponse(
+          false,
+          undefined,
+          "Bibliography not found or has been deleted"
+        ),
         { status: 404 }
       );
     }
@@ -98,11 +155,11 @@ export async function PUT(
     const updateData = {
       ...body,
       updated_at: new Date(),
-      updated_by: session.user.id,
+      updated_by: authResult.userId,
     };
 
     const result = await collection.updateOne(
-      { _id: id },
+      { _id: new ObjectId(id) },
       { $set: updateData }
     );
 
@@ -113,8 +170,24 @@ export async function PUT(
       );
     }
 
-    // Fetch the updated bibliography
-    const updatedBibliography = await collection.findOne({ _id: id });
+    // Fetch the updated bibliography (ensure it's not deleted)
+    const updatedBibliography = await collection.findOne({
+      _id: new ObjectId(id),
+      $and: [
+        {
+          $or: [
+            { is_active: { $ne: false } }, // is_active is not false
+            { is_active: { $exists: false } }, // is_active field doesn't exist (legacy items)
+          ],
+        },
+        {
+          $or: [
+            { deleted_at: { $exists: false } }, // deleted_at field doesn't exist
+            { deleted_at: null }, // deleted_at is null
+          ],
+        },
+      ],
+    });
     const formattedBibliography =
       formatBibliographyForMobile(updatedBibliography);
 
@@ -132,42 +205,66 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Check authentication
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    // Check authentication using mobile auth utility
+    const authResult = await authenticateMobileRequest(request);
+    if (!authResult.isAuthenticated) {
       return NextResponse.json(
-        createMobileResponse(false, undefined, "Not authenticated"),
+        createMobileResponse(
+          false,
+          undefined,
+          authResult.error || "Not authenticated"
+        ),
         { status: 401 }
       );
     }
 
-    const { id } = params;
+    const { id } = await params;
 
     // Connect to MongoDB
     const client = await clientPromise;
     const db = client.db("test");
     const collection = db.collection("biblio_200419");
 
-    // Check if bibliography exists
-    const existingBibliography = await collection.findOne({ _id: id });
+    // Check if bibliography exists and is not already deleted
+    const existingBibliography = await collection.findOne({
+      _id: new ObjectId(id),
+      $and: [
+        {
+          $or: [
+            { is_active: { $ne: false } }, // is_active is not false
+            { is_active: { $exists: false } }, // is_active field doesn't exist (legacy items)
+          ],
+        },
+        {
+          $or: [
+            { deleted_at: { $exists: false } }, // deleted_at field doesn't exist
+            { deleted_at: null }, // deleted_at is null
+          ],
+        },
+      ],
+    });
     if (!existingBibliography) {
       return NextResponse.json(
-        createMobileResponse(false, undefined, "Bibliography not found"),
+        createMobileResponse(
+          false,
+          undefined,
+          "Bibliography not found or has already been deleted"
+        ),
         { status: 404 }
       );
     }
 
     // Soft delete - mark as inactive instead of removing
     const result = await collection.updateOne(
-      { _id: id },
+      { _id: new ObjectId(id) },
       {
         $set: {
           is_active: false,
           deleted_at: new Date(),
-          deleted_by: session.user.id,
+          deleted_by: authResult.userId,
         },
       }
     );
