@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 export default function LoginPage() {
@@ -10,7 +9,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,7 +25,23 @@ export default function LoginPage() {
       if (result?.error) {
         setError("Invalid credentials");
       } else {
-        router.push("/dashboard");
+        // Full page load, not router.push: the client router can replay the
+        // pre-login redirect to /auth/login it cached for the target page.
+        // Go back to the page that sent us here when it is on this site.
+        const callbackUrl = new URLSearchParams(window.location.search).get(
+          "callbackUrl"
+        );
+        let target = "/dashboard";
+        if (callbackUrl) {
+          const url = new URL(callbackUrl, window.location.origin);
+          if (
+            url.origin === window.location.origin &&
+            !url.pathname.startsWith("/auth/")
+          ) {
+            target = url.pathname + url.search + url.hash;
+          }
+        }
+        window.location.assign(target);
       }
     } catch (error) {
       setError("An error occurred");
