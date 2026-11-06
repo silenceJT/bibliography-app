@@ -1,0 +1,55 @@
+# Weekly backup of the Biblio database (free Atlas cluster: no backups of
+# its own). The export is encrypted before upload: this repository is
+# public, and anyone signed in to GitHub can download its artifacts.
+# Restore: see scripts/restore-backup.mjs.
+name: Backup
+
+on:
+  schedule:
+    - cron: "17 16 * * 0" # Sundays 16:17 UTC (Monday ~03:17 in Sydney)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install the MongoDB driver only
+        run: npm install --no-save --no-package-lock --ignore-scripts --no-audit --no-fund mongodb@$(node -p "require('./package-lock.json').packages['node_modules/mongodb'].version")
+
+      - name: Export collections
+        env:
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+        run: node scripts/backup.mjs backup
+
+      - name: Archive and encrypt
+        env:
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          test -n "$BACKUP_PASSPHRASE" || { echo "BACKUP_PASSPHRASE secret is not set"; exit 1; }
+          tar czf - backup | openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt \
+            -pass env:BACKUP_PASSPHRASE -out biblio-backup.tar.gz.enc
+          rm -rf backup
+          ls -l biblio-backup.tar.gz.enc
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: biblio-backup-${{ github.run_id }}
+          path: biblio-backup.tar.gz.enc
+          retention-days: 90
+          if-no-files-found: error
