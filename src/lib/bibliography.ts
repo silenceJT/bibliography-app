@@ -1,5 +1,6 @@
 import clientPromise from "./mongodb";
 import { ObjectId } from "mongodb";
+import { buildSearchQuery } from "./search-query";
 import {
   Bibliography,
   BibliographySearchResult,
@@ -115,42 +116,7 @@ export class BibliographyService {
   ): Promise<BibliographySearchResult> {
     const collection = await this.getCollection();
 
-    // Build search query efficiently
-    const searchQuery: Record<string, unknown> = {};
-
-    // Add text search if query exists
-    if (query.trim()) {
-      searchQuery.$or = [
-        { title: { $regex: query.trim(), $options: "i" } },
-        { author: { $regex: query.trim(), $options: "i" } },
-        { publication: { $regex: query.trim(), $options: "i" } },
-        { keywords: { $regex: query.trim(), $options: "i" } },
-      ];
-    }
-
-    // Add filters efficiently - all filters use simple logic
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value && value.trim()) {
-        if (key === "year") {
-          // Simple year filtering - support ranges and exact matches
-          const yearValue = value.trim();
-          
-          if (yearValue.includes("-")) {
-            const [startYear, endYear] = yearValue.split("-").map(y => parseInt(y.trim()));
-            if (!isNaN(startYear) && !isNaN(endYear) && startYear <= endYear) {
-              searchQuery[key] = { $gte: startYear, $lte: endYear };
-            }
-          } else {
-            const year = parseInt(yearValue);
-            if (!isNaN(year)) {
-              searchQuery[key] = year;
-            }
-          }
-        } else {
-          searchQuery[key] = { $regex: value.trim(), $options: "i" };
-        }
-      }
-    });
+    const searchQuery = buildSearchQuery(query, filters);
 
     const skip = (page - 1) * limit;
     const sortDirection = sortOrder === "asc" ? 1 : -1;
@@ -205,13 +171,8 @@ export class BibliographyService {
   static async exportToCSV(filters: BibliographyFilters = {}): Promise<string> {
     const collection = await this.getCollection();
 
-    // Build search query similar to search
-    const searchQuery: any = {};
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value && value !== "") {
-        searchQuery[key] = { $regex: value, $options: "i" };
-      }
-    });
+    // Same matching as the search, without the free-text query
+    const searchQuery = buildSearchQuery("", filters);
 
     const data = await collection.find(searchQuery).toArray();
 
