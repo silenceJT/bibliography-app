@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import clientPromise from "@/lib/mongodb";
+import { requirePermission } from "@/lib/permissions";
 import { ReportData } from "@/types/reports";
 
 interface ReportRequest {
@@ -30,6 +31,9 @@ interface DatabaseItem {
 
 export async function POST(request: NextRequest) {
   try {
+    const denied = await requirePermission("canView");
+    if (denied) return denied;
+
     const { dateRange, reportType }: ReportRequest = await request.json();
     const client = await clientPromise;
     const db = client.db();
