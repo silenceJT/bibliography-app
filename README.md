@@ -34,3 +34,18 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Backups
+
+The database is a free MongoDB Atlas cluster, which keeps no backups of its own.
+`.github/workflows/backup.yml` exports every collection of the `test` database
+each week (Sunday 16:17 UTC, or on demand from the Actions tab), encrypts the
+archive with `BACKUP_PASSPHRASE` and keeps it as a workflow artifact for 90 days.
+The repository is public, so the artifact is only safe because it is encrypted:
+keep the passphrase in a password manager, not in the repository.
+
+Repository secrets: `MONGODB_URI` (read access is enough) and `BACKUP_PASSPHRASE`.
+
+To restore, follow the steps at the top of `scripts/restore-backup.mjs`. It
+writes nothing without `--apply`, and won't overwrite a collection that has
+documents unless given `--replace`.
